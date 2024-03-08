@@ -527,14 +527,14 @@ public class GradleApplicationModelBuilder implements ParameterizedToolingModelB
         // see https://github.com/quarkusio/quarkus/issues/20755
 
         final List<SourceDir> sourceDirs = new ArrayList<>(1);
-        project.getTasks().withType(AbstractCompile.class,
-                t -> configureCompileTask(t.getSource(), t.getDestinationDirectory(), allClassesDirs, sourceDirs, t));
+        project.getTasks().withType(AbstractCompile.class)
+                .forEach(t -> configureCompileTask(t.getSource(), t.getDestinationDirectory(), allClassesDirs, sourceDirs, t));
 
         maybeConfigureKotlinJvmCompile(project, allClassesDirs, sourceDirs);
 
         final LinkedHashMap<File, Path> resourceDirs = new LinkedHashMap<>(1);
         final File resourcesOutputDir = sourceSet.getOutput().getResourcesDir();
-        project.getTasks().withType(ProcessResources.class, t -> {
+        project.getTasks().withType(ProcessResources.class).forEach(t -> {
             if (!t.getEnabled()) {
                 return;
             }
@@ -597,14 +597,21 @@ public class GradleApplicationModelBuilder implements ParameterizedToolingModelB
         if (!allClassesDirs.contains(destDir)) {
             return;
         }
-        sources.visit(a -> {
-            // we are looking for the root dirs containing sources
-            if (a.getRelativePath().getSegments().length == 1) {
-                final File srcDir = a.getFile().getParentFile();
-                sourceDirs
-                        .add(new DefaultSourceDir(srcDir.toPath(), destDir.toPath(), null, Map.of("compiler", task.getName())));
-            }
-        });
+        /*
+         * Commented code causing exception when cleaning the output
+         * Check with Quarkus and BT team
+         * > There was a failure while executing work items
+         * > A failure occurred while executing io.quarkus.gradle.tasks.worker.CodeGenWorker
+         * > /project/build/classes/java/main does not exist
+         * sources.visit(a -> {
+         * // we are looking for the root dirs containing sources
+         * if (a.getRelativePath().getSegments().length == 1) {
+         * final File srcDir = a.getFile().getParentFile();
+         * sourceDirs
+         * .add(new DefaultSourceDir(srcDir.toPath(), destDir.toPath(), null, Map.of("compiler", task.getName())));
+         * }
+         * });
+         */
     }
 
     private void addSubstitutedProject(PathList.Builder paths, File projectFile) {
