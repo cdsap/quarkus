@@ -26,7 +26,7 @@ import io.smallrye.config.SmallRyeConfig;
 /**
  * Just show the effective configuration and settings.
  */
-public abstract class QuarkusShowEffectiveConfig extends QuarkusBuildTask {
+public abstract class QuarkusShowEffectiveConfig extends QuarkusBuildTaskWithConfigurationCache {
 
     private final Property<Boolean> saveConfigProperties;
 
@@ -45,20 +45,17 @@ public abstract class QuarkusShowEffectiveConfig extends QuarkusBuildTask {
     @TaskAction
     public void dumpEffectiveConfiguration() {
         try {
-            EffectiveConfig effectiveConfig = extension()
-                    .buildEffectiveConfiguration(extension().getApplicationModel().getAppArtifact());
-            SmallRyeConfig config = effectiveConfig.getConfig();
+            SmallRyeConfig config = getSmallRyeConfig().get();
             List<String> sourceNames = new ArrayList<>();
             config.getConfigSources().forEach(configSource -> sourceNames.add(configSource.getName()));
-
-            String quarkusConfig = config.getValues("quarkus", String.class, String.class)
+            String quarkusConfig = getSmallRyeConfigValues().get()
                     .entrySet()
                     .stream()
                     .map(e -> format("quarkus.%s=%s", e.getKey(), e.getValue())).sorted()
                     .collect(Collectors.joining("\n    ", "\n    ", "\n"));
             getLogger().lifecycle("Effective Quarkus configuration options: {}", quarkusConfig);
 
-            String finalName = extension().finalName();
+            String finalName = getFinalName().get();
             String packageType = config.getOptionalValue(QuarkusPlugin.QUARKUS_PACKAGE_TYPE, String.class).orElse("fast-jar");
             File fastJar = fastJar();
             getLogger().lifecycle(
@@ -71,7 +68,7 @@ public abstract class QuarkusShowEffectiveConfig extends QuarkusBuildTask {
                             "application.(properties|yaml|yml) sources: {}",
                     packageType,
                     finalName,
-                    outputDirectory(),
+                    getOutputDirectory().get(),
                     fastJar,
                     runnerJar(),
                     nativeRunner(),
@@ -79,7 +76,7 @@ public abstract class QuarkusShowEffectiveConfig extends QuarkusBuildTask {
 
             if (getSaveConfigProperties().get()) {
                 Properties props = new Properties();
-                props.putAll(effectiveConfig.getValues());
+                props.putAll(getEffectiveConfigProperties().get());
                 Path file = buildDir.toPath().resolve(finalName + ".quarkus-build.properties");
                 try (BufferedWriter writer = newBufferedWriter(file)) {
                     props.store(writer, format("Quarkus build properties with package type %s", packageType));

@@ -3,6 +3,7 @@ package io.quarkus.gradle.tasks;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -13,11 +14,13 @@ import javax.inject.Inject;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.FileCollection;
-import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.MapProperty;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.CompileClasspath;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -29,7 +32,7 @@ import io.quarkus.gradle.tasks.worker.CodeGenWorker;
 import io.quarkus.runtime.LaunchMode;
 
 @CacheableTask
-public abstract class QuarkusGenerateCode extends QuarkusTask {
+public abstract class QuarkusGenerateCode extends QuarkusTaskWithConfigurationCache {
 
     public static final String QUARKUS_GENERATED_SOURCES = "quarkus-generated-sources";
     public static final String QUARKUS_TEST_GENERATED_SOURCES = "quarkus-test-generated-sources";
@@ -42,6 +45,15 @@ public abstract class QuarkusGenerateCode extends QuarkusTask {
 
     private final LaunchMode launchMode;
     private final String inputSourceSetName;
+
+    private final Property<ApplicationModel> applicationModel = getProject().getObjects().property(ApplicationModel.class);
+    private final Property<String> gradleVersion = getProject().getObjects().property(String.class);
+    private final Property<String> finalName = getProject().getObjects().property(String.class);
+    private final MapProperty<String, String> effectiveConfigurationValuesProperty = getProject().getObjects().mapProperty(
+            String.class,
+            String.class);
+    private final MapProperty<String, String> cachingRelevantInput = getProject().getObjects().mapProperty(String.class,
+            String.class);
 
     @Inject
     public QuarkusGenerateCode(LaunchMode launchMode, String inputSourceSetName) {
@@ -65,9 +77,28 @@ public abstract class QuarkusGenerateCode extends QuarkusTask {
     }
 
     @Input
-    public Map<String, String> getCachingRelevantInput() {
-        ListProperty<String> vars = extension().getCachingRelevantProperties();
-        return extension().baseConfig().cachingRelevantProperties(vars.get());
+    public MapProperty<String, String> getCachingRelevantInput() {
+        return cachingRelevantInput;
+    }
+
+    @Internal
+    public Property<String> getGradleVersion() {
+        return gradleVersion;
+    }
+
+    @Internal
+    public Property<ApplicationModel> getAppModel() {
+        return applicationModel;
+    }
+
+    @Internal
+    public Property<String> getFinalName() {
+        return finalName;
+    }
+
+    @Internal
+    public MapProperty<String, String> getEffectiveConfigurationValues() {
+        return effectiveConfigurationValuesProperty;
     }
 
     @Input
@@ -101,19 +132,19 @@ public abstract class QuarkusGenerateCode extends QuarkusTask {
 
     @TaskAction
     public void generateCode() {
-        ApplicationModel appModel = extension().getApplicationModel(launchMode);
-        Map<String, String> values = extension().buildEffectiveConfiguration(appModel.getAppArtifact()).getValues();
+        ApplicationModel appModel = getAppModel().get();
+        Map<String, String> values = getEffectiveConfigurationValues().get();
 
         File outputPath = getGeneratedOutputDirectory().get().getAsFile();
 
         getLogger().debug("Will trigger preparing sources for source directories: {} buildDir: {}",
                 sourcesDirectories, buildDir.getAbsolutePath());
 
-        WorkQueue workQueue = workQueue(values, () -> extension().codeGenForkOptions);
+        WorkQueue workQueue = workQueue(values, ArrayList::new);
 
         workQueue.submit(CodeGenWorker.class, params -> {
             params.getBuildSystemProperties().putAll(values);
-            params.getBaseName().set(extension().finalName());
+            params.getBaseName().set(getFinalName().get());
             params.getTargetDirectory().set(buildDir);
             params.getAppModel().set(appModel);
             params
@@ -121,7 +152,7 @@ public abstract class QuarkusGenerateCode extends QuarkusTask {
                     .setFrom(sourcesDirectories.stream().map(Path::toFile).collect(Collectors.toList()));
             params.getOutputPath().set(outputPath);
             params.getLaunchMode().set(launchMode);
-            params.getGradleVersion().set(getProject().getGradle().getGradleVersion());
+            params.getGradleVersion().set(getGradleVersion().get());
         });
 
         workQueue.await();

@@ -18,7 +18,7 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.provider.ListProperty;
-import org.gradle.api.provider.MapProperty;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
@@ -34,10 +34,13 @@ import io.quarkus.gradle.dsl.Manifest;
 import io.quarkus.runtime.util.StringUtil;
 
 @CacheableTask
-public abstract class QuarkusBuild extends QuarkusBuildTask {
+public abstract class QuarkusBuild extends QuarkusBuildTaskWithConfigurationCache {
 
     private static final String NATIVE_PROPERTY_NAMESPACE = "quarkus.native";
     public static final String QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD = "quarkus.ignore.legacy.deploy.build";
+
+    private final Property<Manifest> manifestProperty = getProject().getObjects().property(Manifest.class);
+    private final ListProperty<String> ignoredEntriesProperty = getProject().getObjects().listProperty(String.class);
 
     @Inject
     public QuarkusBuild() {
@@ -55,13 +58,8 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     }
 
     @Internal
-    public MapProperty<String, String> getForcedProperties() {
-        return extension().forcedPropertiesProperty();
-    }
-
-    @Internal
     public ListProperty<String> getIgnoredEntries() {
-        return extension().ignoredEntriesProperty();
+        return ignoredEntriesProperty;
     }
 
     @Option(description = "When using the uber-jar option, this option can be used to "
@@ -71,13 +69,13 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     }
 
     @Internal
-    public Manifest getManifest() {
-        return extension().manifest();
+    public Property<Manifest> getManifest() {
+        return manifestProperty;
     }
 
     @SuppressWarnings("unused")
     public QuarkusBuild manifest(Action<Manifest> action) {
-        action.execute(this.getManifest());
+        action.execute(this.getManifest().get());
         return this;
     }
 
@@ -104,7 +102,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     @OutputDirectories
     protected Map<String, File> getBuildOutputDirectories() {
         Map<String, File> outputs = new HashMap<>();
-        PackageConfig.BuiltInType packageType = packageType();
+        PackageConfig.BuiltInType packageType = packageType().get();
         switch (packageType) {
             case LEGACY_JAR:
             case LEGACY:
@@ -138,7 +136,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     @OutputFiles
     protected Map<String, File> getBuildOutputFiles() {
         Map<String, File> outputs = new HashMap<>();
-        PackageConfig.BuiltInType packageType = packageType();
+        PackageConfig.BuiltInType packageType = packageType().get();
         switch (packageType) {
             case UBER_JAR:
             case LEGACY_JAR:
@@ -166,14 +164,14 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     @PathSensitive(PathSensitivity.RELATIVE)
     protected Collection<File> getBuildInputFiles() {
         List<File> inputs = new ArrayList<>();
-        PackageConfig.BuiltInType packageType = packageType();
+        PackageConfig.BuiltInType packageType = packageType().get();
         switch (packageType) {
             case JAR:
             case FAST_JAR:
             case NATIVE:
                 Path appBuildBaseDir = appBuildDir();
                 inputs.add(genBuildDir().toFile());
-                inputs.add(appBuildBaseDir.resolve(outputDirectory()).toFile());
+                inputs.add(appBuildBaseDir.resolve(getOutputDirectory().get()).toFile());
                 runnerAndArtifactsInputs(inputs::add, appBuildBaseDir);
                 break;
             case LEGACY_JAR:
@@ -202,7 +200,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
     @TaskAction
     public void finalizeQuarkusBuild() {
-        if (extension().forcedPropertiesProperty().get().containsKey(QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD)) {
+        if (getForcedProperties().get().containsKey(QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD)) {
             getLogger().info("SKIPPING finalizedBy deploy build");
             return;
         }
@@ -211,7 +209,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         getLogger().info("Removing output files and directories (provide a clean state).");
         getFileSystemOperations().delete(delete -> delete.delete(getBuildOutputFiles().values()));
 
-        PackageConfig.BuiltInType packageType = packageType();
+        PackageConfig.BuiltInType packageType = packageType().get();
         switch (packageType) {
             case JAR:
             case FAST_JAR:
@@ -301,7 +299,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         // build/quarkus-build/app
         Path appBuildBaseDir = appBuildDir();
         // build/quarkus-build/app/quarkus-app
-        Path appBuildDir = appBuildBaseDir.resolve(outputDirectory());
+        Path appBuildDir = appBuildBaseDir.resolve(getOutputDirectory().get());
         // build/quarkus-build/dep
         Path depBuildDir = depBuildDir();
 

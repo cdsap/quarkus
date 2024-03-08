@@ -33,7 +33,7 @@ import io.smallrye.config.SmallRyeConfig;
  * <p>
  * Caching dependency jars is wasted effort and unnecessarily pollutes the Gradle build cache.
  */
-public abstract class QuarkusBuildDependencies extends QuarkusBuildTask {
+public abstract class QuarkusBuildDependencies extends QuarkusBuildTaskWithConfigurationCache {
     static final String CLASS_LOADING_REMOVED_ARTIFACTS = "quarkus.class-loading.removed-artifacts";
     static final String CLASS_LOADING_PARENT_FIRST_ARTIFACTS = "quarkus.class-loading.parent-first-artifacts";
     static final String FILTER_OPTIONAL_DEPENDENCIES = "quarkus.package.filter-optional-dependencies";
@@ -51,7 +51,7 @@ public abstract class QuarkusBuildDependencies extends QuarkusBuildTask {
     @OutputDirectories
     public Map<String, File> getOutputDirectories() {
         Map<String, File> outputs = new HashMap<>();
-        PackageConfig.BuiltInType packageType = packageType();
+        PackageConfig.BuiltInType packageType = packageType().get();
         switch (packageType) {
             case JAR:
             case FAST_JAR:
@@ -78,7 +78,7 @@ public abstract class QuarkusBuildDependencies extends QuarkusBuildTask {
         // checks work against "clean" outputs, considering that the outputs depend on the package-type.
         getFileSystemOperations().delete(delete -> delete.delete(depDir));
 
-        PackageConfig.BuiltInType packageType = packageType();
+        PackageConfig.BuiltInType packageType = packageType().get();
         switch (packageType) {
             case JAR:
             case FAST_JAR:
@@ -139,8 +139,8 @@ public abstract class QuarkusBuildDependencies extends QuarkusBuildTask {
             throw new GradleException(String.format("Failed to create directories in %s", depDir), e);
         }
 
-        ApplicationModel appModel = resolveAppModelForBuild();
-        SmallRyeConfig config = extension().buildEffectiveConfiguration(appModel.getAppArtifact()).getConfig();
+        ApplicationModel appModel = getResolveAppModelForBuild().get();
+        SmallRyeConfig config = getSmallRyeConfig().get();
 
         // see https://quarkus.io/guides/class-loading-reference#configuring-class-loading
         Set<ArtifactKey> removedArtifacts = config.getOptionalValue(CLASS_LOADING_REMOVED_ARTIFACTS, String.class)

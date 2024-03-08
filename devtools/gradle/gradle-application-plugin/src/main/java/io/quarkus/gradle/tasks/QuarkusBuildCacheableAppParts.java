@@ -17,7 +17,7 @@ import io.quarkus.deployment.pkg.PackageConfig;
 import io.quarkus.gradle.QuarkusPlugin;
 
 @CacheableTask
-public abstract class QuarkusBuildCacheableAppParts extends QuarkusBuildTask {
+public abstract class QuarkusBuildCacheableAppParts extends QuarkusBuildTaskWithConfigurationCache {
     static final String QUARKUS_ARTIFACT_PROPERTIES = "quarkus-artifact.properties";
 
     @Inject
@@ -28,7 +28,7 @@ public abstract class QuarkusBuildCacheableAppParts extends QuarkusBuildTask {
 
     @Internal
     public boolean isCachedByDefault() {
-        switch (packageType()) {
+        switch (packageType().get()) {
             case JAR:
             case FAST_JAR:
             case LEGACY_JAR:
@@ -46,7 +46,7 @@ public abstract class QuarkusBuildCacheableAppParts extends QuarkusBuildTask {
     @OutputDirectories
     public Map<String, File> getOutputDirectories() {
         Map<String, File> outputs = new HashMap<>();
-        PackageConfig.BuiltInType packageType = packageType();
+        PackageConfig.BuiltInType packageType = packageType().get();
         switch (packageType) {
             case JAR:
             case FAST_JAR:
@@ -73,7 +73,7 @@ public abstract class QuarkusBuildCacheableAppParts extends QuarkusBuildTask {
         // checks work against "clean" outputs, considering that the outputs depend on the package-type.
         getFileSystemOperations().delete(delete -> delete.delete(appDir));
 
-        PackageConfig.BuiltInType packageType = packageType();
+        PackageConfig.BuiltInType packageType = packageType().get();
         switch (packageType) {
             case JAR:
             case FAST_JAR:
@@ -121,7 +121,7 @@ public abstract class QuarkusBuildCacheableAppParts extends QuarkusBuildTask {
     private void fastJarBuild() {
         generateBuild();
 
-        String outputDirectory = outputDirectory();
+        String outputDirectory = getOutputDirectory().get();
         Path genDir = genBuildDir();
         Path appDir = appBuildDir();
 

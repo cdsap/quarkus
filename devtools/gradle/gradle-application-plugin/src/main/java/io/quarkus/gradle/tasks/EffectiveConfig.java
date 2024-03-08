@@ -26,7 +26,6 @@ import io.quarkus.deployment.pkg.PackageConfig;
 import io.quarkus.runtime.configuration.ApplicationPropertiesConfigSourceLoader;
 import io.quarkus.runtime.configuration.ConfigUtils;
 import io.smallrye.config.AbstractLocationConfigSourceLoader;
-import io.smallrye.config.EnvConfigSource;
 import io.smallrye.config.Expressions;
 import io.smallrye.config.PropertiesConfigSource;
 import io.smallrye.config.PropertiesConfigSourceProvider;
@@ -68,8 +67,11 @@ public final class EffectiveConfig {
         configSources.add(new PropertiesConfigSource(asStringMap(builder.taskProperties), "taskProperties", 500));
         configSources.add(new PropertiesConfigSource(ConfigSourceUtil.propertiesToMap(System.getProperties()),
                 "System.getProperties()", 400));
-        configSources.add(new EnvConfigSource(300) {
-        });
+        //  Commenting because the EnvConfigSource gives following error:
+        //  Calculating task graph as configuration cache cannot be reused because environment variable 'APP_NAME_33094' has changed.
+        //  Check with Quarkus team
+        //        configSources.add(new EnvConfigSource(300) {
+        //        });
         configSources.add(new PropertiesConfigSource(builder.buildProperties, "quarkusBuildProperties", 290));
         configSources.add(new PropertiesConfigSource(asStringMap(builder.projectProperties), "projectProperties", 280));
 

@@ -18,7 +18,7 @@ import io.quarkus.runtime.configuration.ConfigInstantiator;
  * Configuration from system properties, environment, application.properties/yaml/yml, project properties is
  * available in a Gradle task's configuration phase.
  */
-final class BaseConfig {
+public final class BaseConfig {
     private final Manifest manifest;
     private final PackageConfig packageConfig;
     private final Map<String, String> values;
@@ -37,11 +37,11 @@ final class BaseConfig {
         values = config.getValues();
     }
 
-    PackageConfig packageConfig() {
+    public PackageConfig packageConfig() {
         return packageConfig;
     }
 
-    PackageConfig.BuiltInType packageType() {
+    public PackageConfig.BuiltInType packageType() {
         return PackageConfig.BuiltInType.fromString(packageConfig.type);
     }
 
@@ -49,7 +49,7 @@ final class BaseConfig {
         return manifest;
     }
 
-    Map<String, String> cachingRelevantProperties(List<String> propertyPatterns) {
+    public Map<String, String> cachingRelevantProperties(List<String> propertyPatterns) {
         List<Pattern> patterns = propertyPatterns.stream().map(s -> "^(" + s + ")$").map(Pattern::compile)
                 .collect(Collectors.toList());
         Predicate<Map.Entry<String, ?>> keyPredicate = e -> patterns.stream().anyMatch(p -> p.matcher(e.getKey()).matches());

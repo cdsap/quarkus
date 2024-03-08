@@ -78,12 +78,12 @@ public abstract class AbstractQuarkusExtension {
         return new BaseConfig(effectiveConfig);
     }
 
-    protected BaseConfig baseConfig() {
+    public BaseConfig baseConfig() {
         this.baseConfig.finalizeValue();
         return this.baseConfig.get();
     }
 
-    protected MapProperty<String, String> forcedPropertiesProperty() {
+    public MapProperty<String, String> forcedPropertiesProperty() {
         return forcedPropertiesProperty;
     }
 
@@ -91,7 +91,7 @@ public abstract class AbstractQuarkusExtension {
         return ignoredEntries;
     }
 
-    protected FileCollection classpath() {
+    public FileCollection classpath() {
         return classpath;
     }
 
@@ -99,7 +99,7 @@ public abstract class AbstractQuarkusExtension {
         return baseConfig().manifest();
     }
 
-    protected EffectiveConfig buildEffectiveConfiguration(ResolvedDependency appArtifact) {
+    public EffectiveConfig buildEffectiveConfiguration(ResolvedDependency appArtifact) {
         Map<String, Object> properties = new HashMap<>();
 
         exportCustomManifestProperties(properties);
@@ -144,7 +144,7 @@ public abstract class AbstractQuarkusExtension {
      * @param appArtifact the application dependency to retrive the quarkus application name and version.
      * @return a filtered view of the configuration only with <code>quarkus.</code> names.
      */
-    protected Map<String, String> buildSystemProperties(ResolvedDependency appArtifact, Map<String, String> quarkusProperties) {
+    public Map<String, String> buildSystemProperties(ResolvedDependency appArtifact, Map<String, String> quarkusProperties) {
         Map<String, String> buildSystemProperties = new HashMap<>();
         buildSystemProperties.putIfAbsent("quarkus.application.name", appArtifact.getArtifactId());
         buildSystemProperties.putIfAbsent("quarkus.application.version", appArtifact.getVersion());
@@ -214,7 +214,7 @@ public abstract class AbstractQuarkusExtension {
         return profile;
     }
 
-    private static FileCollection dependencyClasspath(SourceSet mainSourceSet) {
+    public static FileCollection dependencyClasspath(SourceSet mainSourceSet) {
         return mainSourceSet.getCompileClasspath().plus(mainSourceSet.getRuntimeClasspath())
                 .plus(mainSourceSet.getAnnotationProcessorPath())
                 .plus(mainSourceSet.getResources());
