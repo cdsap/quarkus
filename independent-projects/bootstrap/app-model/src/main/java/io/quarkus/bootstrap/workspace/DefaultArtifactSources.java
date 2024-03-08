@@ -1,7 +1,7 @@
 package io.quarkus.bootstrap.workspace;
 
 import java.io.Serializable;
-import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
 public class DefaultArtifactSources implements ArtifactSources, Serializable {
@@ -9,10 +9,10 @@ public class DefaultArtifactSources implements ArtifactSources, Serializable {
     private static final long serialVersionUID = 2053702489268820757L;
 
     private final String classifier;
-    private final Collection<SourceDir> sources;
-    private final Collection<SourceDir> resources;
+    private final List<SourceDir> sources;
+    private final List<SourceDir> resources;
 
-    public DefaultArtifactSources(String classifier, Collection<SourceDir> sources, Collection<SourceDir> resources) {
+    public DefaultArtifactSources(String classifier, List<SourceDir> sources, List<SourceDir> resources) {
         this.classifier = Objects.requireNonNull(classifier, "The classifier is null");
         this.sources = sources;
         this.resources = resources;
@@ -28,7 +28,7 @@ public class DefaultArtifactSources implements ArtifactSources, Serializable {
     }
 
     @Override
-    public Collection<SourceDir> getSourceDirs() {
+    public List<SourceDir> getSourceDirs() {
         return sources;
     }
 
@@ -37,7 +37,7 @@ public class DefaultArtifactSources implements ArtifactSources, Serializable {
     }
 
     @Override
-    public Collection<SourceDir> getResourceDirs() {
+    public List<SourceDir> getResourceDirs() {
         return resources;
     }
 

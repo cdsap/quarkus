@@ -2,7 +2,7 @@ package io.quarkus.bootstrap.workspace;
 
 import java.io.Serializable;
 import java.nio.file.Path;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
@@ -19,7 +19,7 @@ public class DefaultSourceDir implements SourceDir, Serializable {
     private final Map<Object, Object> data;
 
     public DefaultSourceDir(Path srcDir, Path destinationDir, Path generatedSourcesDir) {
-        this(srcDir, destinationDir, generatedSourcesDir, Collections.emptyMap());
+        this(srcDir, destinationDir, generatedSourcesDir, new HashMap<>());
     }
 
     public DefaultSourceDir(Path srcDir, Path destinationDir, Path generatedSourcesDir, Map<Object, Object> data) {
@@ -32,7 +32,7 @@ public class DefaultSourceDir implements SourceDir, Serializable {
         this.srcTree = srcTree;
         this.outputTree = outputTree;
         this.generatedSourcesTree = generatedSourcesTree;
-        this.data = data;
+        this.data = new HashMap<>(data);
     }
 
     @Override

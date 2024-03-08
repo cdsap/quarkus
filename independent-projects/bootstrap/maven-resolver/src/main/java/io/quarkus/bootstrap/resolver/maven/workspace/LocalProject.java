@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -505,13 +504,13 @@ public class LocalProject {
         final List<String> excludes = collectChildValues(dom.getChild("excludes"));
         final PathFilter filter = includes == null && excludes == null ? null : new PathFilter(includes, excludes);
         final String classifier = getClassifier(dom, test);
-        final Collection<SourceDir> sources = List.of(
+        final List<SourceDir> sources = List.of(
                 new DefaultSourceDir(new DirectoryPathTree(test ? getTestSourcesSourcesDir() : getSourcesSourcesDir()),
                         new DirectoryPathTree(test ? getTestClassesDir() : getClassesDir(), filter),
                         // FIXME: wrong for tests
                         new DirectoryPathTree(test ? getGeneratedSourcesDir() : getGeneratedSourcesDir(), filter),
                         Map.of()));
-        final Collection<SourceDir> resources = test ? collectTestResources(filter) : collectMainResources(filter);
+        final List<SourceDir> resources = test ? collectTestResources(filter) : collectMainResources(filter);
         return new DefaultArtifactSources(classifier, sources, resources);
     }
 
@@ -532,7 +531,7 @@ public class LocalProject {
         return classifier == null ? (test ? ArtifactSources.TEST : ArtifactSources.MAIN) : classifier.getValue();
     }
 
-    private Collection<SourceDir> collectMainResources(PathFilter filter) {
+    private List<SourceDir> collectMainResources(PathFilter filter) {
         final List<Resource> resources = rawModel.getBuild() == null ? List.of()
                 : rawModel.getBuild().getResources();
         final Path classesDir = getClassesDir();
@@ -561,7 +560,7 @@ public class LocalProject {
         return sourceDirs;
     }
 
-    private Collection<SourceDir> collectTestResources(PathFilter filter) {
+    private List<SourceDir> collectTestResources(PathFilter filter) {
         final List<Resource> resources = rawModel.getBuild() == null ? List.of()
                 : rawModel.getBuild().getTestResources();
         final Path testClassesDir = getTestClassesDir();

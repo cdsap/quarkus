@@ -197,8 +197,8 @@ public class DefaultWorkspaceModule implements WorkspaceModule, Serializable {
     private Map<String, ArtifactSources> sourcesSets = new HashMap<>();
     private List<Dependency> directDepConstraints;
     private List<Dependency> directDeps;
-    private Collection<String> testClasspathDependencyExclusions = List.of();
-    private Collection<String> additionalTestClasspathElements = List.of();
+    private Collection<String> testClasspathDependencyExclusions = new ArrayList<>();
+    private Collection<String> additionalTestClasspathElements = new ArrayList<>();
     private WorkspaceModule parent;
 
     private DefaultWorkspaceModule() {

@@ -2,6 +2,7 @@ package io.quarkus.bootstrap.workspace;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import io.quarkus.maven.dependency.ArtifactCoords;
@@ -15,18 +16,20 @@ public interface ArtifactSources {
     String TEST = "tests";
 
     static ArtifactSources main(SourceDir sources, SourceDir resources) {
-        return new DefaultArtifactSources(MAIN, List.of(sources), List.of(resources));
+        return new DefaultArtifactSources(MAIN, new ArrayList<>(Collections.singletonList(sources)),
+                Collections.singletonList(resources));
     }
 
     static ArtifactSources test(SourceDir sources, SourceDir resources) {
-        return new DefaultArtifactSources(TEST, List.of(sources), List.of(resources));
+        return new DefaultArtifactSources(TEST, new ArrayList<>(Collections.singletonList(sources)),
+                Collections.singletonList(resources));
     }
 
     String getClassifier();
 
-    Collection<SourceDir> getSourceDirs();
+    List<SourceDir> getSourceDirs();
 
-    Collection<SourceDir> getResourceDirs();
+    List<SourceDir> getResourceDirs();
 
     default boolean isOutputAvailable() {
         for (SourceDir src : getSourceDirs()) {

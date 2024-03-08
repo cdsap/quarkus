@@ -1,9 +1,9 @@
 package io.quarkus.bootstrap.model;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -46,7 +46,7 @@ public class CapabilityContract implements ExtensionCapabilities, Serializable {
     }
 
     private static Collection<String> parseCapabilities(String s) {
-        return s == null || s.isBlank() ? List.of() : Arrays.asList(capabilitiesPattern.split(s));
+        return s == null || s.isBlank() ? new ArrayList<>() : Arrays.asList(capabilitiesPattern.split(s));
     }
 
     private final String extension;
@@ -62,7 +62,7 @@ public class CapabilityContract implements ExtensionCapabilities, Serializable {
      */
     @Deprecated(forRemoval = true)
     public CapabilityContract(String extension, Collection<String> providesCapabilities) {
-        this(extension, providesCapabilities, List.of());
+        this(extension, providesCapabilities, new ArrayList<>());
     }
 
     public CapabilityContract(String extension, Collection<String> providesCapabilities,

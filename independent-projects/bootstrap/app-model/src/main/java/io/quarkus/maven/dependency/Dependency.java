@@ -1,6 +1,6 @@
 package io.quarkus.maven.dependency;
 
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
 
 public interface Dependency extends ArtifactCoords {
@@ -22,8 +22,8 @@ public interface Dependency extends ArtifactCoords {
 
     String getScope();
 
-    default Collection<ArtifactKey> getExclusions() {
-        return List.of();
+    default List<ArtifactKey> getExclusions() {
+        return new ArrayList<>();
     }
 
     int getFlags();

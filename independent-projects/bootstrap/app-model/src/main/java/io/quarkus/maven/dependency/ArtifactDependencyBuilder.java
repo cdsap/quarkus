@@ -1,7 +1,6 @@
 package io.quarkus.maven.dependency;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 abstract class AbstractDependencyBuilder<B extends AbstractDependencyBuilder<B, T>, T> {
@@ -13,7 +12,7 @@ abstract class AbstractDependencyBuilder<B extends AbstractDependencyBuilder<B, 
     String version;
     String scope = Dependency.SCOPE_COMPILE;
     int flags;
-    Collection<ArtifactKey> exclusions = List.of();
+    List<ArtifactKey> exclusions = new ArrayList<>();
 
     @SuppressWarnings("unchecked")
     public B setCoords(ArtifactCoords coords) {
