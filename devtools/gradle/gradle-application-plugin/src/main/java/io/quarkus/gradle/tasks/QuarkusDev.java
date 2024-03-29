@@ -33,6 +33,7 @@ import org.gradle.api.artifacts.ModuleVersionIdentifier;
 import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileSystemLocation;
+import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
@@ -55,6 +56,7 @@ import org.gradle.api.tasks.options.Option;
 import org.gradle.jvm.toolchain.JavaLauncher;
 import org.gradle.jvm.toolchain.JavaToolchainService;
 import org.gradle.jvm.toolchain.JavaToolchainSpec;
+import org.gradle.process.ExecOperations;
 import org.gradle.util.GradleVersion;
 
 import io.quarkus.analytics.AnalyticsService;
@@ -84,7 +86,7 @@ public abstract class QuarkusDev extends QuarkusTask {
 
     public static final String IO_QUARKUS_DEVMODE_ARGS = "io.quarkus.devmode-args";
 
-    private final Configuration quarkusDevConfiguration;
+    private final FileCollection quarkusDevConfiguration;
     private final SourceSet mainSourceSet;
 
     private final CompilerOptions compilerOptions = new CompilerOptions();
@@ -137,7 +139,54 @@ public abstract class QuarkusDev extends QuarkusTask {
         openJavaLang = objectFactory.property(Boolean.class);
         openJavaLang.convention(false);
         modules = objectFactory.listProperty(String.class);
+        getProjectName().set(getProject().getName());
+        getProjectVersion().set(getProject().getVersion().toString());
+        getJavaLauncher().set(configureJavaLauncher());
+        configureSourceTargetCompatibility();
     }
+
+    private Provider<JavaLauncher> configureJavaLauncher() {
+        if (GradleVersion.current().compareTo(GradleVersion.version("6.7")) < 0) {
+            return getProject().getObjects().property(JavaLauncher.class);
+        }
+        JavaPluginExtension javaPluginExtension = getProject().getExtensions().getByType(JavaPluginExtension.class);
+        JavaToolchainService toolChainService = getProject().getExtensions().getByType(JavaToolchainService.class);
+        JavaToolchainSpec toolchainSpec = javaPluginExtension.getToolchain();
+        return toolChainService.launcherFor(toolchainSpec);
+    }
+
+    private void configureSourceTargetCompatibility() {
+        // Query source and target compatibility lazily from the Java via Callable, since they are not Provider
+        JavaPluginExtension javaPluginExtension = getProject().getExtensions().getByType(JavaPluginExtension.class);
+        getSourceCompatibility()
+                .set(getProject().getProviders().provider(() -> javaPluginExtension.getSourceCompatibility().toString()));
+        getTargetCompatibility()
+                .set(getProject().getProviders().provider(() -> javaPluginExtension.getTargetCompatibility().toString()));
+    }
+
+    @Inject
+    public abstract ProjectLayout getLayout();
+
+    @Inject
+    public abstract ExecOperations getExec();
+
+    @Internal
+    public abstract Property<String> getProjectName();
+
+    @Internal
+    public abstract Property<String> getProjectVersion();
+
+    @Input
+    @Optional
+    public abstract Property<JavaLauncher> getJavaLauncher();
+
+    @Input
+    @Optional
+    public abstract Property<String> getSourceCompatibility();
+
+    @Input
+    @Optional
+    public abstract Property<String> getTargetCompatibility();
 
     /**
      * The dependency Configuration associated with this task. Used
@@ -147,7 +196,7 @@ public abstract class QuarkusDev extends QuarkusTask {
      */
     @SuppressWarnings("unused")
     @CompileClasspath
-    public Configuration getQuarkusDevConfiguration() {
+    public FileCollection getQuarkusDevConfiguration() {
         return this.quarkusDevConfiguration;
     }
 
@@ -193,7 +242,7 @@ public abstract class QuarkusDev extends QuarkusTask {
      */
     @Deprecated
     public void setWorkingDir(String workingDir) {
-        workingDirectory.set(getProject().file(workingDir));
+        workingDirectory.set(getLayout().getProjectDirectory().file(workingDir).getAsFile());
     }
 
     @Input
@@ -351,7 +400,7 @@ public abstract class QuarkusDev extends QuarkusTask {
             QuarkusDevModeLauncher runner = newLauncher(analyticsService);
             String outputFile = System.getProperty(IO_QUARKUS_DEVMODE_ARGS);
             if (outputFile == null) {
-                getProject().exec(action -> {
+                getExec().exec(action -> {
                     action.commandLine(runner.args()).workingDir(getWorkingDirectory().get());
                     action.environment(getEnvVars());
                     action.setStandardInput(System.in)
@@ -400,18 +449,11 @@ public abstract class QuarkusDev extends QuarkusTask {
 
     private QuarkusDevModeLauncher newLauncher(final AnalyticsService analyticsService) throws Exception {
         final Project project = getProject();
-        final JavaPluginExtension javaPluginExtension = project.getExtensions().getByType(JavaPluginExtension.class);
 
-        String java = null;
+        String java = getJavaLauncher().isPresent()
+                ? getJavaLauncher().get().getExecutablePath().getAsFile().getAbsolutePath()
+                : null;
 
-        if (GradleVersion.current().compareTo(GradleVersion.version("6.7")) >= 0) {
-            JavaToolchainService toolChainService = project.getExtensions().getByType(JavaToolchainService.class);
-            JavaToolchainSpec toolchainSpec = javaPluginExtension.getToolchain();
-            Provider<JavaLauncher> javaLauncher = toolChainService.launcherFor(toolchainSpec);
-            if (javaLauncher.isPresent()) {
-                java = javaLauncher.get().getExecutablePath().getAsFile().getAbsolutePath();
-            }
-        }
         GradleDevModeLauncher.Builder builder = GradleDevModeLauncher.builder(getLogger(), java)
                 .preventnoverify(getPreventNoVerify().getOrElse(false))
                 .projectDir(projectDir)
@@ -448,8 +490,8 @@ public abstract class QuarkusDev extends QuarkusTask {
         }
 
         //  this is a minor hack to allow ApplicationConfig to be populated with defaults
-        builder.applicationName(project.getName());
-        builder.applicationVersion(project.getVersion().toString());
+        builder.applicationName(getProjectName().get());
+        builder.applicationVersion(getProjectVersion().get());
 
         builder.sourceEncoding(getSourceEncoding());
 
@@ -458,8 +500,8 @@ public abstract class QuarkusDev extends QuarkusTask {
         analyticsService.sendAnalytics(
                 DEV_MODE,
                 appModel,
-                Map.of(GRADLE_VERSION, getProject().getGradle().getGradleVersion()),
-                getProject().getBuildDir().getAbsoluteFile());
+                Map.of(GRADLE_VERSION, GradleVersion.current()),
+                getLayout().getBuildDirectory().getAsFile().get().getAbsoluteFile());
 
         final Set<ArtifactKey> projectDependencies = new HashSet<>();
         for (ResolvedDependency localDep : DependenciesFilter.getReloadableModules(appModel)) {
@@ -494,8 +536,8 @@ public abstract class QuarkusDev extends QuarkusTask {
             }
         }
 
-        builder.sourceJavaVersion(javaPluginExtension.getSourceCompatibility().toString());
-        builder.targetJavaVersion(javaPluginExtension.getTargetCompatibility().toString());
+        builder.sourceJavaVersion(getSourceCompatibility().getOrNull());
+        builder.targetJavaVersion(getTargetCompatibility().getOrNull());
 
         for (CompilerOption compilerOptions : compilerOptions.getCompilerOptions()) {
             builder.compilerOptions(compilerOptions.getName(), compilerOptions.getArgs());

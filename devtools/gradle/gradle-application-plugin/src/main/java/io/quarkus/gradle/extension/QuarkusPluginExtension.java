@@ -1,21 +1,15 @@
 package io.quarkus.gradle.extension;
 
-import static io.quarkus.runtime.LaunchMode.*;
-
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import java.util.StringJoiner;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.plugins.JavaPlugin;
@@ -25,22 +19,17 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
-import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.tasks.Jar;
 import org.gradle.process.JavaForkOptions;
 
-import io.quarkus.bootstrap.BootstrapConstants;
 import io.quarkus.bootstrap.model.ApplicationModel;
 import io.quarkus.bootstrap.resolver.AppModelResolver;
 import io.quarkus.gradle.AppModelGradleResolver;
-import io.quarkus.gradle.QuarkusPlugin;
 import io.quarkus.gradle.dsl.Manifest;
 import io.quarkus.gradle.tasks.AbstractQuarkusExtension;
-import io.quarkus.gradle.tasks.QuarkusBuild;
 import io.quarkus.gradle.tasks.QuarkusGradleUtils;
 import io.quarkus.gradle.tooling.ToolingUtils;
 import io.quarkus.runtime.LaunchMode;
-import io.smallrye.config.SmallRyeConfig;
 
 public abstract class QuarkusPluginExtension extends AbstractQuarkusExtension {
     private final SourceSetExtension sourceSetExtension;
@@ -66,55 +55,6 @@ public abstract class QuarkusPluginExtension extends AbstractQuarkusExtension {
     @SuppressWarnings("unused")
     public void manifest(Action<Manifest> action) {
         action.execute(this.getManifest());
-    }
-
-    public void beforeTest(Test task) {
-        try {
-            Map<String, Object> props = task.getSystemProperties();
-            ApplicationModel appModel = getApplicationModel(TEST);
-
-            SmallRyeConfig config = buildEffectiveConfiguration(appModel.getAppArtifact()).getConfig();
-            config.getOptionalValue(TEST.getProfileKey(), String.class)
-                    .ifPresent(value -> props.put(TEST.getProfileKey(), value));
-
-            Path serializedModel = ToolingUtils.serializeAppModel(appModel, task, true);
-            props.put(BootstrapConstants.SERIALIZED_TEST_APP_MODEL, serializedModel.toString());
-
-            StringJoiner outputSourcesDir = new StringJoiner(",");
-            for (File outputSourceDir : combinedOutputSourceDirs()) {
-                outputSourcesDir.add(outputSourceDir.getAbsolutePath());
-            }
-            props.put(BootstrapConstants.OUTPUT_SOURCES_DIR, outputSourcesDir.toString());
-
-            SourceSetContainer sourceSets = getSourceSets();
-            SourceSet mainSourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
-
-            File outputDirectoryAsFile = getLastFile(mainSourceSet.getOutput().getClassesDirs());
-
-            Path projectDirPath = projectDir.toPath();
-
-            // Identify the folder containing the sources associated with this test task
-            String fileList = sourceSets.stream()
-                    .filter(sourceSet -> Objects.equals(
-                            task.getTestClassesDirs().getAsPath(),
-                            sourceSet.getOutput().getClassesDirs().getAsPath()))
-                    .flatMap(sourceSet -> sourceSet.getOutput().getClassesDirs().getFiles().stream())
-                    .filter(File::exists)
-                    .distinct()
-                    .map(testSrcDir -> String.format("%s:%s",
-                            projectDirPath.relativize(testSrcDir.toPath()),
-                            projectDirPath.relativize(outputDirectoryAsFile.toPath())))
-                    .collect(Collectors.joining(","));
-            task.environment(BootstrapConstants.TEST_TO_MAIN_MAPPINGS, fileList);
-            task.getLogger().debug("test dir mapping - {}", fileList);
-
-            QuarkusBuild quarkusBuild = project.getTasks().named(QuarkusPlugin.QUARKUS_BUILD_TASK_NAME, QuarkusBuild.class)
-                    .get();
-            String nativeRunner = quarkusBuild.getNativeRunner().toPath().toAbsolutePath().toString();
-            props.put("native.image.path", nativeRunner);
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to resolve deployment classpath", e);
-        }
     }
 
     public Property<String> getFinalName() {
@@ -165,16 +105,19 @@ public abstract class QuarkusPluginExtension extends AbstractQuarkusExtension {
         return getSourceSets().getByName(SourceSet.MAIN_SOURCE_SET_NAME).getResources().getSrcDirs();
     }
 
-    public Set<File> combinedOutputSourceDirs() {
-        Set<File> sourcesDirs = new LinkedHashSet<>();
-        SourceSetContainer sourceSets = getSourceSets();
-        sourcesDirs.addAll(sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME).getOutput().getClassesDirs().getFiles());
-        sourcesDirs.addAll(sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME).getOutput().getClassesDirs().getFiles());
-        return sourcesDirs;
+    /**
+     * TODO: Move to QuarkusGradleUtils?
+     */
+    public static FileCollection combinedOutputSourceDirs(Project project) {
+        ConfigurableFileCollection classesDirs = project.files();
+        SourceSetContainer sourceSets = project.getExtensions().getByType(SourceSetContainer.class);
+        classesDirs.from(sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME).getOutput().getClassesDirs());
+        classesDirs.from(sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME).getOutput().getClassesDirs());
+        return classesDirs;
     }
 
     public AppModelResolver getAppModelResolver() {
-        return getAppModelResolver(NORMAL);
+        return getAppModelResolver(LaunchMode.NORMAL);
     }
 
     public AppModelResolver getAppModelResolver(LaunchMode mode) {
@@ -182,7 +125,7 @@ public abstract class QuarkusPluginExtension extends AbstractQuarkusExtension {
     }
 
     public ApplicationModel getApplicationModel() {
-        return getApplicationModel(NORMAL);
+        return getApplicationModel(LaunchMode.NORMAL);
     }
 
     public ApplicationModel getApplicationModel(LaunchMode mode) {

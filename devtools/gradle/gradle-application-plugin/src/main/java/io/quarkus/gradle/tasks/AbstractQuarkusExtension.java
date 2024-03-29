@@ -1,17 +1,12 @@
 package io.quarkus.gradle.tasks;
 
 import static io.quarkus.gradle.tasks.QuarkusGradleUtils.getSourceSet;
-import static io.smallrye.common.expression.Expression.Flag.DOUBLE_COLON;
-import static io.smallrye.common.expression.Expression.Flag.LENIENT_SYNTAX;
-import static io.smallrye.common.expression.Expression.Flag.NO_SMART_BRACES;
-import static io.smallrye.common.expression.Expression.Flag.NO_TRIM;
 import static java.util.Collections.emptyList;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,15 +16,14 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.java.archives.Attributes;
-import org.gradle.api.provider.ListProperty;
-import org.gradle.api.provider.MapProperty;
-import org.gradle.api.provider.Property;
+import org.gradle.api.provider.*;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.process.JavaForkOptions;
 
+import io.quarkus.gradle.config.QuarkusEnvVariableValueSource;
+import io.quarkus.gradle.config.QuarkusSystemPropertyValueSource;
 import io.quarkus.gradle.dsl.Manifest;
 import io.quarkus.maven.dependency.ResolvedDependency;
-import io.smallrye.common.expression.Expression;
 
 /**
  * This base class exists to hide internal properties, make those only available in the {@link io.quarkus.gradle.tasks}
@@ -39,7 +33,7 @@ public abstract class AbstractQuarkusExtension {
     private static final String MANIFEST_SECTIONS_PROPERTY_PREFIX = "quarkus.package.manifest.manifest-sections";
     private static final String MANIFEST_ATTRIBUTES_PROPERTY_PREFIX = "quarkus.package.manifest.attributes";
 
-    private static final String QUARKUS_PROFILE = "quarkus.profile";
+    public static final String QUARKUS_PROFILE = "quarkus.profile";
     protected final Project project;
     protected final File projectDir;
     protected final Property<String> finalName;
@@ -51,6 +45,9 @@ public abstract class AbstractQuarkusExtension {
     private final Property<BaseConfig> baseConfig;
     protected final List<Action<? super JavaForkOptions>> codeGenForkOptions;
     protected final List<Action<? super JavaForkOptions>> buildForkOptions;
+    private final Manifest manifest;
+    private final Provider<Map<String, String>> envVariables;
+    private final Provider<Map<String, String>> systemProperties;
 
     protected AbstractQuarkusExtension(Project project) {
         this.project = project;
@@ -64,20 +61,31 @@ public abstract class AbstractQuarkusExtension {
         this.ignoredEntries.convention(
                 project.provider(() -> baseConfig().packageConfig().userConfiguredIgnoredEntries.orElse(emptyList())));
         this.baseConfig = project.getObjects().property(BaseConfig.class).value(project.provider(this::buildBaseConfig));
+        this.envVariables = project.getProviders().of(QuarkusEnvVariableValueSource.class,
+                spec -> spec.parameters(parameters -> parameters.getPatterns().set(cachingRelevantProperties)));
+        this.systemProperties = project.getProviders().of(QuarkusSystemPropertyValueSource.class,
+                spec -> spec.parameters(parameters -> parameters.getPatterns().set(cachingRelevantProperties)));
         SourceSet mainSourceSet = getSourceSet(project, SourceSet.MAIN_SOURCE_SET_NAME);
         this.classpath = dependencyClasspath(mainSourceSet);
         this.codeGenForkOptions = new ArrayList<>();
         this.buildForkOptions = new ArrayList<>();
+        this.manifest = new Manifest();
     }
 
     private BaseConfig buildBaseConfig() {
         // Using common code to construct the "base config", which is all the configuration (system properties,
         // environment, application.properties/yaml/yml, project properties) that is available in a Gradle task's
         // _configuration phase_.
-        EffectiveConfig effectiveConfig = buildEffectiveConfiguration(Collections.emptyMap());
-        return new BaseConfig(effectiveConfig);
+        EffectiveConfig effectiveConfig = buildEffectiveConfiguration(Collections.emptyMap(), systemProperties.get(),
+                envVariables.get());
+        return new BaseConfig(effectiveConfig, manifest);
     }
 
+    /**
+     * BaseConfig reads all properties/env variables etc. in the constructor, so it should be instantiated at execution time
+     * via new BaseConfig()
+     */
+    @Deprecated
     protected BaseConfig baseConfig() {
         this.baseConfig.finalizeValue();
         return this.baseConfig.get();
@@ -96,9 +104,10 @@ public abstract class AbstractQuarkusExtension {
     }
 
     protected Manifest manifest() {
-        return baseConfig().manifest();
+        return manifest;
     }
 
+    @Deprecated
     protected EffectiveConfig buildEffectiveConfiguration(ResolvedDependency appArtifact) {
         Map<String, Object> properties = new HashMap<>();
 
@@ -112,10 +121,13 @@ public abstract class AbstractQuarkusExtension {
         properties.putIfAbsent("quarkus.application.name", appArtifact.getArtifactId());
         properties.putIfAbsent("quarkus.application.version", appArtifact.getVersion());
 
-        return buildEffectiveConfiguration(properties);
+        return buildEffectiveConfiguration(properties, systemProperties.get(), envVariables.get());
     }
 
-    private EffectiveConfig buildEffectiveConfiguration(Map<String, Object> properties) {
+    private EffectiveConfig buildEffectiveConfiguration(
+            Map<String, Object> properties,
+            Map<String, String> systemProperties,
+            Map<String, String> envVariables) {
         Set<File> resourcesDirs = getSourceSet(project, SourceSet.MAIN_SOURCE_SET_NAME).getResources().getSourceDirectories()
                 .getFiles();
 
@@ -133,6 +145,8 @@ public abstract class AbstractQuarkusExtension {
                 .withProjectProperties(project.getProperties())
                 .withSourceDirectories(resourcesDirs)
                 .withProfile(quarkusProfile())
+                .withSystemProperties(systemProperties)
+                .withEnvVariables(envVariables)
                 .build();
     }
 
@@ -144,7 +158,7 @@ public abstract class AbstractQuarkusExtension {
      * @param appArtifact the application dependency to retrive the quarkus application name and version.
      * @return a filtered view of the configuration only with <code>quarkus.</code> names.
      */
-    protected Map<String, String> buildSystemProperties(ResolvedDependency appArtifact, Map<String, String> quarkusProperties) {
+    protected Map<String, String> buildSystemProperties(ResolvedDependency appArtifact) {
         Map<String, String> buildSystemProperties = new HashMap<>();
         buildSystemProperties.putIfAbsent("quarkus.application.name", appArtifact.getArtifactId());
         buildSystemProperties.putIfAbsent("quarkus.application.version", appArtifact.getVersion());
@@ -164,33 +178,6 @@ public abstract class AbstractQuarkusExtension {
                 buildSystemProperties.put(entry.getKey(), entry.getValue().toString());
             }
         }
-
-        Set<String> quarkusValues = new HashSet<>();
-        quarkusValues.addAll(quarkusProperties.values());
-        quarkusValues.addAll(buildSystemProperties.values());
-
-        for (String value : quarkusValues) {
-            Expression expression = Expression.compile(value, LENIENT_SYNTAX, NO_TRIM, NO_SMART_BRACES, DOUBLE_COLON);
-            for (String reference : expression.getReferencedStrings()) {
-                String expanded = forcedPropertiesProperty.get().get(reference);
-                if (expanded != null) {
-                    buildSystemProperties.put(reference, expanded);
-                    continue;
-                }
-
-                expanded = quarkusBuildProperties.get().get(reference);
-                if (expanded != null) {
-                    buildSystemProperties.put(reference, expanded);
-                    continue;
-                }
-
-                expanded = (String) project.getProperties().get(reference);
-                if (expanded != null) {
-                    buildSystemProperties.put(reference, expanded);
-                }
-            }
-        }
-
         return buildSystemProperties;
     }
 
@@ -234,14 +221,14 @@ public abstract class AbstractQuarkusExtension {
         }
     }
 
-    private String toManifestAttributeKey(String key) {
+    public static String toManifestAttributeKey(String key) {
         if (key.contains("\"")) {
             throw new GradleException("Manifest entry name " + key + " is invalid. \" characters are not allowed.");
         }
         return String.format("%s.\"%s\"", MANIFEST_ATTRIBUTES_PROPERTY_PREFIX, key);
     }
 
-    private String toManifestSectionAttributeKey(String section, String key) {
+    public static String toManifestSectionAttributeKey(String section, String key) {
         if (section.contains("\"")) {
             throw new GradleException("Manifest section name " + section + " is invalid. \" characters are not allowed.");
         }

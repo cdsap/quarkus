@@ -5,12 +5,12 @@ plugins {
 dependencies {
     implementation(libs.smallrye.config.yaml)
     implementation("io.quarkus:quarkus-analytics-common")
-
+    compileOnly(libs.kotlin.gradle.plugin.api)
     testImplementation(libs.quarkus.project.core.extension.codestarts)
 }
 
 group = "io.quarkus"
-
+version="20"
 gradlePlugin {
     plugins.create("quarkusPlugin") {
         id = "io.quarkus"
@@ -18,6 +18,14 @@ gradlePlugin {
         displayName = "Quarkus Plugin"
         description =
             "Builds a Quarkus application, and provides helpers to launch dev-mode, the Quarkus CLI, building of native images"
+        tags.addAll("quarkus", "quarkusio", "graalvm")
+    }
+
+    plugins.create("quarkusWorkspacePlugin") {
+        id = "io.quarkus.workspace"
+        implementationClass = "io.quarkus.gradle.workspace.QuarkusWorkspacePlugin"
+        displayName = "Quarkus Workspace Plugin"
+        description = "Used to discover workspace for Quarkus application"
         tags.addAll("quarkus", "quarkusio", "graalvm")
     }
 }

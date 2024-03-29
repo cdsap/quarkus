@@ -2,11 +2,9 @@ package io.quarkus.gradle.tasks;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import io.quarkus.deployment.pkg.PackageConfig;
+import io.quarkus.gradle.config.QuarkusPropertyValueSourceHelper;
 import io.quarkus.gradle.dsl.Manifest;
 import io.quarkus.runtime.configuration.ConfigInstantiator;
 
@@ -21,20 +19,21 @@ import io.quarkus.runtime.configuration.ConfigInstantiator;
 final class BaseConfig {
     private final Manifest manifest;
     private final PackageConfig packageConfig;
-    private final Map<String, String> values;
+    private final Map<String, String> configMap;
 
     // Note: EffectiveConfig has all the code to load the configurations from all the sources.
-    BaseConfig(EffectiveConfig config) {
+    BaseConfig(EffectiveConfig config, Manifest userDefinedManifest) {
         manifest = new Manifest();
         packageConfig = new PackageConfig();
 
-        ConfigInstantiator.handleObject(packageConfig, config.getConfig());
+        ConfigInstantiator.handleObject(packageConfig, config.config());
 
         // populate the Gradle Manifest object
         manifest.attributes(packageConfig.manifest.attributes);
         packageConfig.manifest.manifestSections.forEach((section, attribs) -> manifest.attributes(attribs, section));
+        userDefinedManifest.copyTo(manifest);
 
-        values = config.getValues();
+        configMap = config.configMap();
     }
 
     PackageConfig packageConfig() {
@@ -50,11 +49,6 @@ final class BaseConfig {
     }
 
     Map<String, String> cachingRelevantProperties(List<String> propertyPatterns) {
-        List<Pattern> patterns = propertyPatterns.stream().map(s -> "^(" + s + ")$").map(Pattern::compile)
-                .collect(Collectors.toList());
-        Predicate<Map.Entry<String, ?>> keyPredicate = e -> patterns.stream().anyMatch(p -> p.matcher(e.getKey()).matches());
-        return values.entrySet().stream()
-                .filter(keyPredicate)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        return QuarkusPropertyValueSourceHelper.filter(configMap, propertyPatterns);
     }
 }

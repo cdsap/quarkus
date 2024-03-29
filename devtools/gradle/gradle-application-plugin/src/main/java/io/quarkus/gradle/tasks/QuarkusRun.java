@@ -47,7 +47,7 @@ public abstract class QuarkusRun extends QuarkusBuildTask {
     }
 
     public QuarkusRun(String description) {
-        super(description);
+        super(description, false);
         final ObjectFactory objectFactory = getProject().getObjects();
         mainSourceSet = getProject().getExtensions().getByType(SourceSetContainer.class)
                 .getByName(SourceSet.MAIN_SOURCE_SET_NAME);
@@ -100,8 +100,9 @@ public abstract class QuarkusRun extends QuarkusBuildTask {
     @TaskAction
     public void runQuarkus() {
         ApplicationModel appModel = resolveAppModelForBuild();
+        Map<String, String> configMap = extension().buildEffectiveConfiguration(appModel.getAppArtifact()).configMap();
         Properties sysProps = new Properties();
-        sysProps.putAll(extension().buildEffectiveConfiguration(appModel.getAppArtifact()).getValues());
+        sysProps.putAll(configMap);
         try (CuratedApplication curatedApplication = QuarkusBootstrap.builder()
                 .setBaseClassLoader(getClass().getClassLoader())
                 .setExistingModel(appModel)

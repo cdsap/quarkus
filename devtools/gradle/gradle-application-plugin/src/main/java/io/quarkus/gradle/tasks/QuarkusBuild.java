@@ -41,7 +41,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
     @Inject
     public QuarkusBuild() {
-        super("Builds a Quarkus application.");
+        super("Builds a Quarkus application.", true);
     }
 
     @SuppressWarnings("unused")

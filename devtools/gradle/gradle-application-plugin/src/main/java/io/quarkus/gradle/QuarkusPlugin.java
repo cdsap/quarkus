@@ -1,7 +1,10 @@
 package io.quarkus.gradle;
 
+import static io.quarkus.gradle.extension.QuarkusPluginExtension.combinedOutputSourceDirs;
+
 import java.io.File;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -9,21 +12,15 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Action;
-import org.gradle.api.DefaultTask;
-import org.gradle.api.GradleException;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.UnknownTaskException;
+import org.gradle.api.*;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.api.artifacts.ExternalModuleDependency;
 import org.gradle.api.artifacts.ProjectDependency;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
@@ -37,33 +34,11 @@ import org.gradle.util.GradleVersion;
 import io.quarkus.gradle.dependency.ApplicationDeploymentClasspathBuilder;
 import io.quarkus.gradle.extension.QuarkusPluginExtension;
 import io.quarkus.gradle.extension.SourceSetExtension;
-import io.quarkus.gradle.tasks.Deploy;
-import io.quarkus.gradle.tasks.ImageBuild;
-import io.quarkus.gradle.tasks.ImagePush;
-import io.quarkus.gradle.tasks.QuarkusAddExtension;
-import io.quarkus.gradle.tasks.QuarkusBuild;
-import io.quarkus.gradle.tasks.QuarkusBuildCacheableAppParts;
-import io.quarkus.gradle.tasks.QuarkusBuildDependencies;
-import io.quarkus.gradle.tasks.QuarkusDev;
-import io.quarkus.gradle.tasks.QuarkusGenerateCode;
-import io.quarkus.gradle.tasks.QuarkusGoOffline;
-import io.quarkus.gradle.tasks.QuarkusGradleUtils;
-import io.quarkus.gradle.tasks.QuarkusInfo;
-import io.quarkus.gradle.tasks.QuarkusListCategories;
-import io.quarkus.gradle.tasks.QuarkusListExtensions;
-import io.quarkus.gradle.tasks.QuarkusListPlatforms;
-import io.quarkus.gradle.tasks.QuarkusRemoteDev;
-import io.quarkus.gradle.tasks.QuarkusRemoveExtension;
-import io.quarkus.gradle.tasks.QuarkusRun;
-import io.quarkus.gradle.tasks.QuarkusShowEffectiveConfig;
-import io.quarkus.gradle.tasks.QuarkusTest;
-import io.quarkus.gradle.tasks.QuarkusTestConfig;
-import io.quarkus.gradle.tasks.QuarkusUpdate;
+import io.quarkus.gradle.tasks.*;
+import io.quarkus.gradle.tasks.actions.BeforeTestAction;
 import io.quarkus.gradle.tooling.GradleApplicationModelBuilder;
-import io.quarkus.gradle.tooling.ToolingUtils;
-import io.quarkus.gradle.tooling.dependency.DependencyUtils;
-import io.quarkus.gradle.tooling.dependency.ExtensionDependency;
-import io.quarkus.gradle.tooling.dependency.ProjectExtensionDependency;
+import io.quarkus.gradle.workspace.descriptors.DefaultProjectDescriptor;
+import io.quarkus.gradle.workspace.descriptors.ProjectDescriptorBuilder;
 import io.quarkus.runtime.LaunchMode;
 
 public class QuarkusPlugin implements Plugin<Project> {
@@ -136,7 +111,6 @@ public class QuarkusPlugin implements Plugin<Project> {
         final QuarkusPluginExtension quarkusExt = project.getExtensions().create(EXTENSION_NAME, QuarkusPluginExtension.class,
                 project);
 
-        createSourceSets(project);
         createConfigurations(project);
         registerTasks(project, quarkusExt);
     }
@@ -164,23 +138,69 @@ public class QuarkusPlugin implements Plugin<Project> {
                     .getByName(ApplicationDeploymentClasspathBuilder.getBaseRuntimeConfigName(LaunchMode.DEVELOPMENT)));
         });
 
+        Provider<DefaultProjectDescriptor> projectDescriptor = ProjectDescriptorBuilder.buildForApp(project);
+        ApplicationDeploymentClasspathBuilder classpath = new ApplicationDeploymentClasspathBuilder(project, LaunchMode.TEST);
+        TaskProvider<QuarkusApplicationModelTask> quarkusGenerateTestAppModelTask = tasks.register(
+                "quarkusGenerateTestAppModel",
+                QuarkusApplicationModelTask.class, task -> {
+                    task.getProjectDescriptor().set(projectDescriptor);
+                    task.getLaunchMode().set(LaunchMode.TEST);
+                    task.getQuarkusBootstrapDiscovery().set(false); // Set to false for now
+                    task.getAppClasspath().configureFrom(classpath.getRawRuntimeConfiguration());
+                    task.getPlatformConfiguration().configureFrom(classpath.getPlatformConfiguration());
+                    task.getDeploymentClasspath().configureFrom(classpath.getDeploymentConfiguration());
+                    task.getApplicationModel().set(
+                            project.getLayout().getBuildDirectory()
+                                    .file("quarkus/application-model/quarkus-app-test-model.dat"));
+                });
+        ApplicationDeploymentClasspathBuilder devClasspath = new ApplicationDeploymentClasspathBuilder(project,
+                LaunchMode.DEVELOPMENT);
+        TaskProvider<QuarkusApplicationModelTask> quarkusGenerateDevAppModelTask = tasks.register("quarkusGenerateDevAppModel",
+                QuarkusApplicationModelTask.class, task -> {
+                    task.getProjectDescriptor().set(projectDescriptor);
+                    task.getLaunchMode().set(LaunchMode.DEVELOPMENT);
+                    task.getQuarkusBootstrapDiscovery().set(false); // Set to false for now
+                    task.getAppClasspath().configureFrom(devClasspath.getRawRuntimeConfiguration());
+                    task.getPlatformConfiguration().configureFrom(devClasspath.getPlatformConfiguration());
+                    task.getDeploymentClasspath().configureFrom(devClasspath.getDeploymentConfiguration());
+                    task.getApplicationModel().set(
+                            project.getLayout().getBuildDirectory()
+                                    .file("quarkus/application-model/quarkus-app-dev-model.dat"));
+                });
+        ApplicationDeploymentClasspathBuilder normalClasspath = new ApplicationDeploymentClasspathBuilder(project,
+                LaunchMode.NORMAL);
+        TaskProvider<QuarkusApplicationModelTask> quarkusGenerateAppModelTask = tasks.register("quarkusGenerateAppModel",
+                QuarkusApplicationModelTask.class, task -> {
+                    // For prod mode, we don't need to collect the test SourceSets
+                    task.getProjectDescriptor().set(projectDescriptor
+                            .map(d -> d.withSourceSetView(Collections.singleton(SourceSet.MAIN_SOURCE_SET_NAME))));
+                    task.getLaunchMode().set(LaunchMode.NORMAL);
+                    task.getQuarkusBootstrapDiscovery().set(false); // Set to false for now
+                    task.getAppClasspath().configureFrom(normalClasspath.getRawRuntimeConfiguration());
+                    task.getPlatformConfiguration().configureFrom(normalClasspath.getPlatformConfiguration());
+                    task.getDeploymentClasspath().configureFrom(normalClasspath.getDeploymentConfiguration());
+                    task.getApplicationModel().set(
+                            project.getLayout().getBuildDirectory().file("quarkus/application-model/quarkus-app-model.dat"));
+                });
         // quarkusGenerateCode
         TaskProvider<QuarkusGenerateCode> quarkusGenerateCode = tasks.register(QUARKUS_GENERATE_CODE_TASK_NAME,
                 QuarkusGenerateCode.class, LaunchMode.NORMAL, SourceSet.MAIN_SOURCE_SET_NAME);
-        quarkusGenerateCode.configure(task -> configureGenerateCodeTask(task, QuarkusGenerateCode.QUARKUS_GENERATED_SOURCES));
+        quarkusGenerateCode.configure(task -> configureGenerateCodeTask(task, quarkusGenerateAppModelTask,
+                QuarkusGenerateCode.QUARKUS_GENERATED_SOURCES));
         // quarkusGenerateCodeDev
         TaskProvider<QuarkusGenerateCode> quarkusGenerateCodeDev = tasks.register(QUARKUS_GENERATE_CODE_DEV_TASK_NAME,
                 QuarkusGenerateCode.class, LaunchMode.DEVELOPMENT, SourceSet.MAIN_SOURCE_SET_NAME);
         quarkusGenerateCodeDev.configure(task -> {
             task.dependsOn(quarkusGenerateCode);
-            configureGenerateCodeTask(task, QuarkusGenerateCode.QUARKUS_GENERATED_SOURCES);
+            configureGenerateCodeTask(task, quarkusGenerateDevAppModelTask, QuarkusGenerateCode.QUARKUS_GENERATED_SOURCES);
         });
         // quarkusGenerateCodeTests
         TaskProvider<QuarkusGenerateCode> quarkusGenerateCodeTests = tasks.register(QUARKUS_GENERATE_CODE_TESTS_TASK_NAME,
                 QuarkusGenerateCode.class, LaunchMode.TEST, SourceSet.TEST_SOURCE_SET_NAME);
         quarkusGenerateCodeTests.configure(task -> {
             task.dependsOn("compileQuarkusTestGeneratedSourcesJava");
-            configureGenerateCodeTask(task, QuarkusGenerateCode.QUARKUS_TEST_GENERATED_SOURCES);
+            configureGenerateCodeTask(task, quarkusGenerateTestAppModelTask,
+                    QuarkusGenerateCode.QUARKUS_TEST_GENERATED_SOURCES);
         });
 
         tasks.register(QUARKUS_SHOW_EFFECTIVE_CONFIG_TASK_NAME,
@@ -233,8 +253,7 @@ public class QuarkusPlugin implements Plugin<Project> {
 
         TaskProvider<QuarkusDev> quarkusDev = tasks.register(QUARKUS_DEV_TASK_NAME, QuarkusDev.class, devRuntimeDependencies,
                 quarkusExt);
-        TaskProvider<QuarkusRun> quarkusRun = tasks.register(QUARKUS_RUN_TASK_NAME, QuarkusRun.class,
-                build -> build.dependsOn(quarkusBuild));
+        TaskProvider<QuarkusRun> quarkusRun = tasks.register(QUARKUS_RUN_TASK_NAME, QuarkusRun.class);
         TaskProvider<QuarkusRemoteDev> quarkusRemoteDev = tasks.register(QUARKUS_REMOTE_DEV_TASK_NAME, QuarkusRemoteDev.class,
                 devRuntimeDependencies, quarkusExt);
         TaskProvider<QuarkusTest> quarkusTest = tasks.register(QUARKUS_TEST_TASK_NAME, QuarkusTest.class,
@@ -324,7 +343,7 @@ public class QuarkusPlugin implements Plugin<Project> {
                     quarkusGenerateCodeDev.configure(task -> task.setSourcesDirectories(getSourcesParents(mainSourceSet)));
                     quarkusGenerateCodeTests.configure(task -> task.setSourcesDirectories(getSourcesParents(testSourceSet)));
 
-                    SourceSet intTestSourceSet = sourceSets.getByName(INTEGRATION_TEST_SOURCE_SET_NAME);
+                    SourceSet intTestSourceSet = sourceSets.create(INTEGRATION_TEST_SOURCE_SET_NAME);
                     intTestSourceSet.setCompileClasspath(
                             intTestSourceSet.getCompileClasspath()
                                     .plus(mainSourceSet.getOutput())
@@ -346,7 +365,7 @@ public class QuarkusPlugin implements Plugin<Project> {
                         intTestTask.setTestClassesDirs(intTestSourceOutputClasses);
                     });
 
-                    SourceSet nativeTestSourceSet = sourceSets.getByName(NATIVE_TEST_SOURCE_SET_NAME);
+                    SourceSet nativeTestSourceSet = sourceSets.create(NATIVE_TEST_SOURCE_SET_NAME);
                     nativeTestSourceSet.setCompileClasspath(
                             nativeTestSourceSet.getCompileClasspath()
                                     .plus(mainSourceSet.getOutput())
@@ -375,25 +394,24 @@ public class QuarkusPlugin implements Plugin<Project> {
                         // Calling this method tells Gradle that it should not fail the build.
                         // Side effect is that the configuration cache will be at least degraded,
                         // but the build will not fail.
-                        t.notCompatibleWithConfigurationCache(
-                                "The quarkus-plugin isn't compatible with the configuration cache");
 
+                        // App Model output is input for before test action
+                        t.getInputs().files(quarkusGenerateTestAppModelTask);
                         // Quarkus test configuration action which should be executed before any Quarkus test
-                        // Use anonymous classes in order to leverage task avoidance.
-                        t.doFirst(new Action<Task>() {
-                            @Override
-                            public void execute(Task task) {
-                                quarkusExt.beforeTest((Test) task);
-                            }
-                        });
+                        t.doFirst(new BeforeTestAction(
+                                project.getProjectDir(),
+                                combinedOutputSourceDirs(project),
+                                quarkusGenerateTestAppModelTask.flatMap(QuarkusApplicationModelTask::getApplicationModel),
+                                quarkusBuild.map(QuarkusBuild::getNativeRunner),
+                                mainSourceSet.getOutput().getClassesDirs()));
                         // also make each task use the JUnit platform since it's the only supported test environment
                         t.useJUnitPlatform();
                     });
                     // quarkusBuild is expected to run after the project has passed the tests
                     quarkusBuildCacheableAppParts.configure(task -> task.shouldRunAfter(tasks.withType(Test.class)));
 
-                    SourceSet generatedSourceSet = sourceSets.getByName(QuarkusGenerateCode.QUARKUS_GENERATED_SOURCES);
-                    SourceSet generatedTestSourceSet = sourceSets.getByName(QuarkusGenerateCode.QUARKUS_TEST_GENERATED_SOURCES);
+                    SourceSet generatedSourceSet = sourceSets.create(QuarkusGenerateCode.QUARKUS_GENERATED_SOURCES);
+                    SourceSet generatedTestSourceSet = sourceSets.create(QuarkusGenerateCode.QUARKUS_TEST_GENERATED_SOURCES);
 
                     // Register the quarkus-generated-code
                     for (String provider : QuarkusGenerateCode.CODE_GENERATION_PROVIDER) {
@@ -414,22 +432,17 @@ public class QuarkusPlugin implements Plugin<Project> {
         });
     }
 
-    private static void configureGenerateCodeTask(QuarkusGenerateCode task, String generateSourcesDir) {
+    private static void configureGenerateCodeTask(QuarkusGenerateCode task,
+            TaskProvider<QuarkusApplicationModelTask> applicationModelTaskTaskProvider, String generateSourcesDir) {
         SourceSet generatedSources = QuarkusGradleUtils.getSourceSet(task.getProject(), generateSourcesDir);
         Set<File> sourceSetOutput = generatedSources.getOutput().filter(f -> f.getName().equals(generateSourcesDir)).getFiles();
         if (sourceSetOutput.isEmpty()) {
             throw new GradleException("Failed to configure " + task.getPath() + ": sourceSet " + generateSourcesDir
                     + " has no output");
         }
-        task.getGeneratedOutputDirectory().set(generatedSources.getJava().getClassesDirectory().get().getAsFile());
-    }
-
-    private void createSourceSets(Project project) {
-        SourceSetContainer sourceSets = project.getExtensions().getByType(SourceSetContainer.class);
-        sourceSets.create(INTEGRATION_TEST_SOURCE_SET_NAME);
-        sourceSets.create(NATIVE_TEST_SOURCE_SET_NAME);
-        sourceSets.create(QuarkusGenerateCode.QUARKUS_GENERATED_SOURCES);
-        sourceSets.create(QuarkusGenerateCode.QUARKUS_TEST_GENERATED_SOURCES);
+        task.getApplicationModel()
+                .set(applicationModelTaskTaskProvider.flatMap(QuarkusApplicationModelTask::getApplicationModel));
+        task.getGeneratedOutputDirectory().set(generatedSources.getJava().getClassesDirectory());
     }
 
     private void createConfigurations(Project project) {
@@ -437,9 +450,9 @@ public class QuarkusPlugin implements Plugin<Project> {
         final ConfigurationContainer configContainer = project.getConfigurations();
 
         // Custom configuration to be used for the dependencies of the testNative task
-        configContainer.getByName(NATIVE_TEST_IMPLEMENTATION_CONFIGURATION_NAME)
+        configContainer.maybeCreate(NATIVE_TEST_IMPLEMENTATION_CONFIGURATION_NAME)
                 .extendsFrom(configContainer.findByName(JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME));
-        configContainer.getByName(NATIVE_TEST_RUNTIME_ONLY_CONFIGURATION_NAME)
+        configContainer.maybeCreate(NATIVE_TEST_RUNTIME_ONLY_CONFIGURATION_NAME)
                 .extendsFrom(configContainer.findByName(JavaPlugin.TEST_RUNTIME_ONLY_CONFIGURATION_NAME));
 
         // create a custom configuration to be used for the dependencies of the quarkusIntTest task
@@ -523,15 +536,16 @@ public class QuarkusPlugin implements Plugin<Project> {
         if (dep.getState().getExecuted()) {
             setupQuarkusBuildTaskDeps(project, dep, visited);
         } else {
-            dep.afterEvaluate(p -> setupQuarkusBuildTaskDeps(project, p, visited));
+            dep.afterEvaluate(p -> {
+                setupQuarkusBuildTaskDeps(project, p, visited);
+            });
         }
     }
 
     private void setupQuarkusBuildTaskDeps(Project project, Project dep, Set<String> visited) {
-        if (!visited.add(dep.getGroup() + ":" + dep.getName())) {
+        if (!visited.add(dep.getPath())) {
             return;
         }
-
         project.getLogger().debug("Configuring {} task dependencies on {} tasks", project, dep);
 
         getLazyTask(project, QUARKUS_BUILD_TASK_NAME)
@@ -569,37 +583,10 @@ public class QuarkusPlugin implements Plugin<Project> {
             }
             compilePlusRuntimeConfig.getIncoming().getDependencies()
                     .forEach(d -> {
-                        Project depProject = null;
-
                         if (d instanceof ProjectDependency) {
-                            depProject = ((ProjectDependency) d).getDependencyProject();
-                        } else if (d instanceof ExternalModuleDependency) {
-                            depProject = ToolingUtils.findIncludedProject(project, (ExternalModuleDependency) d);
-                        }
-
-                        if (depProject == null) {
-                            return;
-                        }
-
-                        if (depProject.getState().getExecuted()) {
-                            visitLocalProject(project, depProject, visited);
-                        } else {
-                            depProject.afterEvaluate(p -> visitLocalProject(project, p, visited));
+                            visitProjectDep(project, ((ProjectDependency) d).getDependencyProject(), visited);
                         }
                     });
-        }
-    }
-
-    private void visitLocalProject(Project project, Project localProject, Set<String> visited) {
-        // local dependency, so we collect also its dependencies
-        visitProjectDep(project, localProject, visited);
-
-        ExtensionDependency<?> extensionDependency = DependencyUtils
-                .getExtensionInfoOrNull(project, localProject);
-
-        if (extensionDependency instanceof ProjectExtensionDependency) {
-            visitProjectDep(project,
-                    ((ProjectExtensionDependency) extensionDependency).getDeploymentModule(), visited);
         }
     }
 
