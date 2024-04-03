@@ -33,7 +33,7 @@ public abstract class QuarkusShowEffectiveConfig extends QuarkusBuildTask {
 
     @Inject
     public QuarkusShowEffectiveConfig() {
-        super("Collect dependencies for the Quarkus application, prefer the 'quarkusBuild' task");
+        super("Collect dependencies for the Quarkus application, prefer the 'quarkusBuild' task", false);
         this.saveConfigProperties = getProject().getObjects().property(Boolean.class).convention(Boolean.FALSE);
     }
 

@@ -41,7 +41,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
     @Inject
     public QuarkusBuild() {
-        super("Builds a Quarkus application.");
+        super("Builds a Quarkus application.", true);
     }
 
     @SuppressWarnings("unused")
@@ -55,30 +55,19 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     }
 
     @Internal
-    public MapProperty<String, String> getForcedProperties() {
-        return extension().forcedPropertiesProperty();
+    public Map<String, String> getForcedProperties() {
+        return getExtensionView().getForcedProperties().get();
     }
 
     @Internal
-    public ListProperty<String> getIgnoredEntries() {
-        return extension().ignoredEntriesProperty();
+    public List<String> getIgnoredEntries() {
+        return getExtensionView().getIgnoredEntries().get();
     }
 
     @Option(description = "When using the uber-jar option, this option can be used to "
             + "specify one or more entries that should be excluded from the final jar", option = "ignored-entry")
     public void setIgnoredEntries(List<String> ignoredEntries) {
         getIgnoredEntries().addAll(ignoredEntries);
-    }
-
-    @Internal
-    public Manifest getManifest() {
-        return extension().manifest();
-    }
-
-    @SuppressWarnings("unused")
-    public QuarkusBuild manifest(Action<Manifest> action) {
-        action.execute(this.getManifest());
-        return this;
     }
 
     @Internal
@@ -209,7 +198,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     @SuppressWarnings("deprecation") // legacy JAR
     @TaskAction
     public void finalizeQuarkusBuild() {
-        if (extension().forcedPropertiesProperty().get().containsKey(QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD)) {
+        if (getForcedProperties().containsKey(QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD)) {
             getLogger().info("SKIPPING finalizedBy deploy build");
             return;
         }

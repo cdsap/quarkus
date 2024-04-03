@@ -184,12 +184,9 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
                 : sourceSetName.equals("tests") ? SourceSet.TEST_SOURCE_SET_NAME : sourceSetName);
         for (String task : tasks) {
             TaskType type = projectDescriptor.getTaskType(task);
-            System.out.println(projectDescriptor.getTaskSource(task));
             Path source = Path.of(projectDescriptor.getTaskSource(task));
             Path destDir = Path.of(projectDescriptor.getTaskDestinationDir(task));
             if (type == TaskType.COMPILE) {
-                 System.out.println("paso " + task + " "+sourceDirs);
-                System.out.println(destDir);
                 sourceDirs.add(new DefaultSourceDir(source, destDir, null, Map.of("compiler", task)));
             } else if (type == TaskType.RESOURCES) {
                 resources.add(new DefaultSourceDir(source, destDir,null));

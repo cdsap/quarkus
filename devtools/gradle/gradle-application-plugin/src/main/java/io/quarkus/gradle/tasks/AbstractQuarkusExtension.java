@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.quarkus.gradle.config.QuarkusEnvVariableValueSource;
+import io.quarkus.gradle.config.QuarkusSystemPropertyValueSource;
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
@@ -24,6 +26,7 @@ import org.gradle.api.java.archives.Attributes;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.process.JavaForkOptions;
 
@@ -39,7 +42,7 @@ public abstract class AbstractQuarkusExtension {
     private static final String MANIFEST_SECTIONS_PROPERTY_PREFIX = "quarkus.package.jar.manifest.sections";
     private static final String MANIFEST_ATTRIBUTES_PROPERTY_PREFIX = "quarkus.package.jar.manifest.attributes";
 
-    private static final String QUARKUS_PROFILE = "quarkus.profile";
+    public static final String QUARKUS_PROFILE = "quarkus.profile";
     protected final Project project;
     protected final File projectDir;
     protected final Property<String> finalName;
@@ -51,6 +54,8 @@ public abstract class AbstractQuarkusExtension {
     private final Property<BaseConfig> baseConfig;
     protected final List<Action<? super JavaForkOptions>> codeGenForkOptions;
     protected final List<Action<? super JavaForkOptions>> buildForkOptions;
+    private final Provider<Map<String, String>> envVariables;
+    private final Provider<Map<String, String>> systemProperties;
 
     protected AbstractQuarkusExtension(Project project) {
         this.project = project;
@@ -59,12 +64,13 @@ public abstract class AbstractQuarkusExtension {
         this.finalName.convention(project.provider(() -> String.format("%s-%s", project.getName(), project.getVersion())));
         this.forcedPropertiesProperty = project.getObjects().mapProperty(String.class, String.class);
         this.quarkusBuildProperties = project.getObjects().mapProperty(String.class, String.class);
-        this.cachingRelevantProperties = project.getObjects().listProperty(String.class)
-                .value(List.of("quarkus[.].*", "platform[.]quarkus[.].*"));
+        this.cachingRelevantProperties = project.getObjects().listProperty(String.class).value(List.of("quarkus[.].*"));
         this.ignoredEntries = project.getObjects().listProperty(String.class);
-        this.ignoredEntries.convention(
-                project.provider(() -> baseConfig().packageConfig().jar().userConfiguredIgnoredEntries().orElse(emptyList())));
         this.baseConfig = project.getObjects().property(BaseConfig.class).value(project.provider(this::buildBaseConfig));
+        this.envVariables = project.getProviders().of(QuarkusEnvVariableValueSource.class,
+                spec -> spec.parameters(parameters -> parameters.getPatterns().set(cachingRelevantProperties)));
+        this.systemProperties = project.getProviders().of(QuarkusSystemPropertyValueSource.class,
+                spec -> spec.parameters(parameters -> parameters.getPatterns().set(cachingRelevantProperties)));
         SourceSet mainSourceSet = getSourceSet(project, SourceSet.MAIN_SOURCE_SET_NAME);
         this.classpath = dependencyClasspath(mainSourceSet);
         this.codeGenForkOptions = new ArrayList<>();
@@ -79,7 +85,7 @@ public abstract class AbstractQuarkusExtension {
         return new BaseConfig(effectiveConfig);
     }
 
-    protected BaseConfig baseConfig() {
+    public BaseConfig baseConfig() {
         this.baseConfig.finalizeValue();
         return this.baseConfig.get();
     }
@@ -235,14 +241,14 @@ public abstract class AbstractQuarkusExtension {
         }
     }
 
-    private String toManifestAttributeKey(String key) {
+    public static String toManifestAttributeKey(String key) {
         if (key.contains("\"")) {
             throw new GradleException("Manifest entry name " + key + " is invalid. \" characters are not allowed.");
         }
         return String.format("%s.\"%s\"", MANIFEST_ATTRIBUTES_PROPERTY_PREFIX, key);
     }
 
-    private String toManifestSectionAttributeKey(String section, String key) {
+    public static String toManifestSectionAttributeKey(String section, String key) {
         if (section.contains("\"")) {
             throw new GradleException("Manifest section name " + section + " is invalid. \" characters are not allowed.");
         }
