@@ -245,7 +245,7 @@ public class ApplicationDeploymentClasspathBuilder {
         return project.getConfigurations().getByName(this.platformConfigurationName);
     }
 
-    private Configuration getRawRuntimeConfiguration() {
+    public Configuration getRawRuntimeConfiguration() {
         return project.getConfigurations().getByName(this.runtimeConfigurationName);
     }
 
