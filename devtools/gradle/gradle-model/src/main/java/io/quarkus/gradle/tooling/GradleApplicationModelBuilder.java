@@ -517,53 +517,53 @@ public class GradleApplicationModelBuilder implements ParameterizedToolingModelB
 
     private static void initProjectModule(Project project, WorkspaceModule.Mutable module, SourceSet sourceSet,
             String classifier) {
-//System.out.println("osoasosaoasosaoosaoasoasoasoasosaoas");
-//        if (sourceSet == null) {
-//            return;
-//        }
-//
-//        final FileCollection allClassesDirs = sourceSet.getOutput().getClassesDirs();
-//        // some plugins do not add source directories to source sets and they may be missing from sourceSet.getAllJava()
-//        // see https://github.com/quarkusio/quarkus/issues/20755
-//
-//        final List<SourceDir> sourceDirs = new ArrayList<>(1);
-//        project.getTasks().withType(AbstractCompile.class,
-//                t -> configureCompileTask(t.getSource(), t.getDestinationDirectory(), allClassesDirs, sourceDirs, t));
-//
-//        maybeConfigureKotlinJvmCompile(project, allClassesDirs, sourceDirs);
-//
-//        final LinkedHashMap<File, Path> resourceDirs = new LinkedHashMap<>(1);
-//        final File resourcesOutputDir = sourceSet.getOutput().getResourcesDir();
-//        project.getTasks().withType(ProcessResources.class, t -> {
-//            if (!t.getEnabled()) {
-//                return;
-//            }
-//            final FileCollection source = t.getSource();
-//            if (source.isEmpty()) {
-//                return;
-//            }
-//            if (!t.getDestinationDir().equals(resourcesOutputDir)) {
-//                return;
-//            }
-//            final Path destDir = t.getDestinationDir().toPath();
-//            source.getAsFileTree().visit(a -> {
-//                // we are looking for the root dirs containing sources
-//                if (a.getRelativePath().getSegments().length == 1) {
-//                    final File srcDir = a.getFile().getParentFile();
-//                    resourceDirs.put(srcDir, destDir);
-//                }
-//            });
-//        });
-//        // there could be a task generating resources
-//        if (resourcesOutputDir.exists() && resourceDirs.isEmpty()) {
-//            sourceSet.getResources().getSrcDirs()
-//                    .forEach(srcDir -> resourceDirs.put(srcDir, resourcesOutputDir.toPath()));
-//        }
-//        final List<SourceDir> resources = new ArrayList<>(resourceDirs.size());
-//        for (Map.Entry<File, Path> e : resourceDirs.entrySet()) {
-//            resources.add(new DefaultSourceDir(e.getKey().toPath(), e.getValue(), null));
-//        }
-//        module.addArtifactSources(new DefaultArtifactSources(classifier, sourceDirs, resources));
+
+        if (sourceSet == null) {
+            return;
+        }
+
+        final FileCollection allClassesDirs = sourceSet.getOutput().getClassesDirs();
+        // some plugins do not add source directories to source sets and they may be missing from sourceSet.getAllJava()
+        // see https://github.com/quarkusio/quarkus/issues/20755
+
+        final List<SourceDir> sourceDirs = new ArrayList<>(1);
+        project.getTasks().withType(AbstractCompile.class,
+                t -> configureCompileTask(t.getSource(), t.getDestinationDirectory(), allClassesDirs, sourceDirs, t));
+
+        maybeConfigureKotlinJvmCompile(project, allClassesDirs, sourceDirs);
+
+        final LinkedHashMap<File, Path> resourceDirs = new LinkedHashMap<>(1);
+        final File resourcesOutputDir = sourceSet.getOutput().getResourcesDir();
+        project.getTasks().withType(ProcessResources.class, t -> {
+            if (!t.getEnabled()) {
+                return;
+            }
+            final FileCollection source = t.getSource();
+            if (source.isEmpty()) {
+                return;
+            }
+            if (!t.getDestinationDir().equals(resourcesOutputDir)) {
+                return;
+            }
+            final Path destDir = t.getDestinationDir().toPath();
+            source.getAsFileTree().visit(a -> {
+                // we are looking for the root dirs containing sources
+                if (a.getRelativePath().getSegments().length == 1) {
+                    final File srcDir = a.getFile().getParentFile();
+                    resourceDirs.put(srcDir, destDir);
+                }
+            });
+        });
+        // there could be a task generating resources
+        if (resourcesOutputDir.exists() && resourceDirs.isEmpty()) {
+            sourceSet.getResources().getSrcDirs()
+                    .forEach(srcDir -> resourceDirs.put(srcDir, resourcesOutputDir.toPath()));
+        }
+        final List<SourceDir> resources = new ArrayList<>(resourceDirs.size());
+        for (Map.Entry<File, Path> e : resourceDirs.entrySet()) {
+            resources.add(new DefaultSourceDir(e.getKey().toPath(), e.getValue(), null));
+        }
+        module.addArtifactSources(new DefaultArtifactSources(classifier, sourceDirs, resources));
     }
 
     private static void maybeConfigureKotlinJvmCompile(Project project, FileCollection allClassesDirs,

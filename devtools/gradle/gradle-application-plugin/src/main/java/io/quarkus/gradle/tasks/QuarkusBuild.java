@@ -55,13 +55,13 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     }
 
     @Internal
-    public MapProperty<String, String> getForcedProperties() {
-        return extension().forcedPropertiesProperty();
+    public Map<String, String> getForcedProperties() {
+        return getExtensionView().getForcedProperties().get();
     }
 
     @Internal
-    public ListProperty<String> getIgnoredEntries() {
-        return extension().ignoredEntriesProperty();
+    public List<String> getIgnoredEntries() {
+        return getExtensionView().getIgnoredEntries().get();
     }
 
     @Option(description = "When using the uber-jar option, this option can be used to "
@@ -72,7 +72,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
     @Internal
     public Manifest getManifest() {
-        return extension().manifest();
+        return getExtensionView().getManifest().get();
     }
 
     @SuppressWarnings("unused")
@@ -202,7 +202,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
     @TaskAction
     public void finalizeQuarkusBuild() {
-        if (extension().forcedPropertiesProperty().get().containsKey(QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD)) {
+        if (getForcedProperties().containsKey(QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD)) {
             getLogger().info("SKIPPING finalizedBy deploy build");
             return;
         }

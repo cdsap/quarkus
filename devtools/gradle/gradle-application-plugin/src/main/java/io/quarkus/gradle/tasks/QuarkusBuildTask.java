@@ -6,33 +6,34 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import io.quarkus.gradle.tooling.ToolingUtils;
+import org.apache.groovy.util.Maps;
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileCopyDetails;
 import org.gradle.api.file.FileSystemOperations;
+import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.logging.LogLevel;
-import org.gradle.api.provider.ListProperty;
-import org.gradle.api.tasks.Classpath;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.StopExecutionException;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.*;
+import org.gradle.util.GradleVersion;
 import org.gradle.workers.WorkQueue;
 
 import io.quarkus.bootstrap.model.ApplicationModel;
-import io.quarkus.bootstrap.resolver.AppModelResolverException;
 import io.quarkus.deployment.pkg.PackageConfig;
-import io.quarkus.gradle.QuarkusPlugin;
 import io.quarkus.gradle.tasks.worker.BuildWorker;
 import io.quarkus.maven.dependency.GACTV;
 
 /**
  * Base class for the {@link QuarkusBuildDependencies}, {@link QuarkusBuildCacheableAppParts}, {@link QuarkusBuild} tasks
  */
-abstract class QuarkusBuildTask extends QuarkusTask {
+public abstract class QuarkusBuildTask extends QuarkusTask {
     private static final String QUARKUS_BUILD_DIR = "quarkus-build";
     private static final String QUARKUS_BUILD_GEN_DIR = QUARKUS_BUILD_DIR + "/gen";
     private static final String QUARKUS_BUILD_APP_DIR = QUARKUS_BUILD_DIR + "/app";
@@ -54,17 +55,43 @@ abstract class QuarkusBuildTask extends QuarkusTask {
 
     @Classpath
     public FileCollection getClasspath() {
-        return extension().classpath();
+        return classpath;
+    }
+
+    private FileCollection classpath = getProject().getObjects().fileCollection();
+
+    public void setCompileClasspath(FileCollection compileClasspath) {
+        this.classpath = compileClasspath;
+    }
+
+    private final Property<String> runnerBaseNameProperty = getProject().getObjects().property(String.class);
+
+    private final Property<String> outputDirectoryProperty = getProject().getObjects().property(String.class);
+
+    private final Property<String> runnerSuffixProperty = getProject().getObjects().property(String.class);
+
+    @Internal
+    public Property<String> getRunnerSuffix() {
+        return runnerSuffixProperty;
+    }
+
+    @Internal
+    public Property<String> getRunnerName() {
+        return runnerBaseNameProperty;
+    }
+
+    @Internal
+    public Property<String> getOutputDirectory() {
+        return outputDirectoryProperty;
     }
 
     @Input
     public Map<String, String> getCachingRelevantInput() {
-        ListProperty<String> vars = extension().getCachingRelevantProperties();
-        return extension().baseConfig().cachingRelevantProperties(vars.get());
+        return getExtensionView().getCachingRelevantInput().get();
     }
 
     PackageConfig.BuiltInType packageType() {
-        return extension().baseConfig().packageType();
+        return getExtensionView().getQuarkusPackageConfigBuiltInType().get();
     }
 
     Path gradleBuildDir() {
@@ -129,28 +156,31 @@ abstract class QuarkusBuildTask extends QuarkusTask {
     }
 
     String runnerBaseName() {
-        BaseConfig baseConfig = extension().baseConfig();
-        return baseConfig.packageConfig().outputName.orElseGet(() -> extension().finalName());
+        return getRunnerName().get();
     }
 
     String outputDirectory() {
-        BaseConfig baseConfig = extension().baseConfig();
-        return baseConfig.packageConfig().outputDirectory.orElse(QuarkusPlugin.DEFAULT_OUTPUT_DIRECTORY);
+
+        return outputDirectoryProperty.get();
     }
 
     private String runnerSuffix() {
-        BaseConfig baseConfig = extension().baseConfig();
-        return baseConfig.packageConfig().getRunnerSuffix();
+        return getRunnerSuffix().get();
+
     }
 
+    @InputFile
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract RegularFileProperty getApplicationModel();
+
+
     ApplicationModel resolveAppModelForBuild() {
-        ApplicationModel appModel;
+        // Works for QuarkusBuild/QuarkusBuildCacheableParts/QuarkusBuildDependencies
         try {
-            appModel = extension().getAppModelResolver().resolveModel(gactv);
-        } catch (AppModelResolverException e) {
-            throw new GradleException("Failed to resolve Quarkus application model for " + getPath(), e);
+            return ToolingUtils.deserializeAppModel(getApplicationModel().get().getAsFile().toPath());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        return appModel;
     }
 
     /**
@@ -207,7 +237,7 @@ abstract class QuarkusBuildTask extends QuarkusTask {
 
         ApplicationModel appModel = resolveAppModelForBuild();
         Map<String, String> configMap = new HashMap<>();
-        for (Map.Entry<String, String> entry : extension().buildEffectiveConfiguration(appModel.getAppArtifact()).configMap()
+        for (Map.Entry<String, String> entry : getExtensionView().buildEffectiveConfiguration(appModel.getAppArtifact()).configMap()
                 .entrySet()) {
             if (entry.getKey().startsWith("quarkus.")) {
                 configMap.put(entry.getKey(), entry.getValue());
@@ -224,14 +254,14 @@ abstract class QuarkusBuildTask extends QuarkusTask {
                             .collect(Collectors.joining("\n    ", "\n    ", "")));
         }
 
-        WorkQueue workQueue = workQueue(configMap, extension().buildForkOptions);
+        WorkQueue workQueue = workQueue(configMap, getExtensionView().getCodeGenForkOptions().get());
 
         workQueue.submit(BuildWorker.class, params -> {
-            params.getBuildSystemProperties().putAll(extension().buildSystemProperties(appModel.getAppArtifact()));
-            params.getBaseName().set(extension().finalName());
+            params.getBuildSystemProperties().putAll(getExtensionView().getQuarkusBuildProperties());
+            params.getBaseName().set(getExtensionView().getFinalName());
             params.getTargetDirectory().set(buildDir.toFile());
             params.getAppModel().set(appModel);
-            params.getGradleVersion().set(getProject().getGradle().getGradleVersion());
+            params.getGradleVersion().set(GradleVersion.current().getVersion());
         });
 
         workQueue.await();

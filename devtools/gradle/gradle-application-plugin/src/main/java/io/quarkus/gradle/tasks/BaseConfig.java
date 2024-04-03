@@ -16,7 +16,7 @@ import io.quarkus.runtime.configuration.ConfigInstantiator;
  * Configuration from system properties, environment, application.properties/yaml/yml, project properties is
  * available in a Gradle task's configuration phase.
  */
-final class BaseConfig {
+public final class BaseConfig {
     private final Manifest manifest;
     private final PackageConfig packageConfig;
     private final Map<String, String> configMap;
@@ -36,7 +36,7 @@ final class BaseConfig {
         configMap = config.configMap();
     }
 
-    PackageConfig packageConfig() {
+    public PackageConfig packageConfig() {
         return packageConfig;
     }
 

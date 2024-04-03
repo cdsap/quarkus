@@ -12,9 +12,11 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import io.quarkus.deployment.pkg.PackageConfig;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.java.archives.Attributes;
 import org.gradle.api.provider.*;
 import org.gradle.api.tasks.*;
@@ -44,6 +46,9 @@ public abstract class QuarkusPluginExtensionView {
         getManifest().set(extension.getManifest());
         getQuarkusProfileSystemVariable().set(getProviderFactory().systemProperty(QUARKUS_PROFILE));
         getQuarkusProfileEnvVariable().set(getProviderFactory().environmentVariable("QUARKUS_PROFILE"));
+        getQuarkusPackageConfigBuiltInType().set(extension.baseConfig().packageType());
+        getCachingRelevantInput().set(extension.baseConfig().cachingRelevantProperties(extension.getCachingRelevantProperties().get()));
+        getForcedProperties().set(extension.forcedPropertiesProperty());
     }
 
     private Provider<Map<String, String>> getQuarkusRelevantProjectProperties(Project project) {
@@ -70,6 +75,9 @@ public abstract class QuarkusPluginExtensionView {
     @Input
     public abstract Property<String> getFinalName();
 
+    @Input
+    public abstract Property<PackageConfig.BuiltInType> getQuarkusPackageConfigBuiltInType();
+
     @Nested
     public abstract ListProperty<Action<? super JavaForkOptions>> getCodeGenForkOptions();
 
@@ -95,6 +103,14 @@ public abstract class QuarkusPluginExtensionView {
     @Input
     @Optional
     public abstract Property<String> getQuarkusProfileEnvVariable();
+
+    @Input
+    @Optional
+    public abstract MapProperty<String,String> getCachingRelevantInput();
+
+    @Input
+    @Optional
+    public abstract MapProperty<String,String> getForcedProperties();
 
     /**
      * TODO: Move out of this class?

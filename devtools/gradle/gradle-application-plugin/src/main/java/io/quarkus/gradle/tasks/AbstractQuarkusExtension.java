@@ -86,7 +86,7 @@ public abstract class AbstractQuarkusExtension {
      * via new BaseConfig()
      */
     @Deprecated
-    protected BaseConfig baseConfig() {
+    public BaseConfig baseConfig() {
         this.baseConfig.finalizeValue();
         return this.baseConfig.get();
     }

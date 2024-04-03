@@ -33,9 +33,11 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.*;
+import org.gradle.internal.composite.IncludedBuildInternal;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.google.common.base.Preconditions;
@@ -86,6 +88,9 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
     @Input
     public abstract Property<LaunchMode> getLaunchMode();
 
+    @Input
+    public abstract MapProperty<String,String> getPlatformImportProperties();
+
     /**
      * If any project task changes, we will invalidate this task anyway
      */
@@ -105,7 +110,6 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
     private void collectPlatforms(ResolvedDependencyResult resolvedDependency,
             Map<ComponentIdentifier, List<QuarkusResolvedArtifact>> artifactsByCapability,
             PlatformImportsImpl platformImports) {
-        System.out.println("Checking dependency: " + resolvedDependency);
         List<QuarkusResolvedArtifact> artifacts = findArtifacts(resolvedDependency, artifactsByCapability);
         ModuleVersionIdentifier moduleVersionIdentifier = resolvedDependency.getSelected().getModuleVersion();
         for (QuarkusResolvedArtifact artifact : artifacts) {
@@ -127,6 +131,7 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
     public void execute() throws IOException {
         final ResolvedDependency appArtifact = getProjectArtifact();
         PlatformImportsImpl platformImports = new PlatformImportsImpl();
+        platformImports.setPlatformProperties(getPlatformImportProperties().get());
         Map<ComponentIdentifier, List<QuarkusResolvedArtifact>> artifactsByCapability = getPlatformConfiguration()
                 .resolvedArtifactsByComponentIdentifier();
         getPlatformConfiguration().getRoot().get().getDependencies().forEach(d -> {
@@ -182,7 +187,7 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
             Path source = Path.of(projectDescriptor.getTaskSource(task));
             Path destDir = Path.of(projectDescriptor.getTaskDestinationDir(task));
             if (type == TaskType.COMPILE) {
-                //sourceDirs.add(new DefaultSourceDir(source, destDir, null, Map.of("compiler", task)));
+                sourceDirs.add(new DefaultSourceDir(source, destDir, null, Map.of("compiler", task)));
             } else if (type == TaskType.RESOURCES) {
                 resources.add(new DefaultSourceDir(source, destDir,null));
             }
@@ -423,7 +428,6 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
 
             if (resolvedDependency.getSelected().getId() instanceof ProjectComponentIdentifier) {
                 // TODO resolve project dependencies
-                System.out.println("Project dependency: " + resolvedDependency.getSelected().getId());
             } else {
                 ResolvedDependencyBuilder dep = modelBuilder.getDependency(artifactKey);
                 if (dep == null) {

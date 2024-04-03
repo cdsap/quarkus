@@ -24,9 +24,9 @@ public interface ArtifactSources {
 
     String getClassifier();
 
-    Collection<SourceDir> getSourceDirs();
+    List<SourceDir> getSourceDirs();
 
-    Collection<SourceDir> getResourceDirs();
+    List<SourceDir> getResourceDirs();
 
     default boolean isOutputAvailable() {
         for (SourceDir src : getSourceDirs()) {
