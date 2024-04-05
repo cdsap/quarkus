@@ -174,9 +174,8 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
         return getRunnerName().get();
     }
 
-    Path outputDirectory() {
-
-        return outputDirectoryProperty.get();
+    String outputDirectory() {
+        return outputDirectoryProperty.get().toString();
     }
 
     private String runnerSuffix() {
