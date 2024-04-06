@@ -14,6 +14,7 @@ import javax.inject.Inject;
 import io.quarkus.deployment.pkg.PackageConfig;
 import io.quarkus.gradle.tasks.*;
 import io.quarkus.gradle.tasks.actions.BeforeTestAction;
+import io.quarkus.gradle.workspace.QuarkusProjectDiscoveryPlugin;
 import io.quarkus.gradle.workspace.descriptors.DefaultProjectDescriptor;
 import io.quarkus.gradle.workspace.descriptors.ProjectDescriptorBuilder;
 import org.gradle.api.Action;
@@ -137,6 +138,19 @@ public class QuarkusPlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {
         verifyGradleVersion();
+        project.getRootProject().getGradle().afterProject(target -> {
+            if (target.getParent() != null) {
+                // Not a root project
+                return;
+            }
+            target.allprojects(project1 -> {
+                // Do not apply any other logic here,
+                // since it will be applied to all projects and will be problematic later
+                // with Gradle isolated-projects
+                project1.getPluginManager().apply(QuarkusProjectDiscoveryPlugin.class);
+            });
+        });
+
 
         // Apply the `java` plugin
         project.getPluginManager().apply(JavaPlugin.class);
