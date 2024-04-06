@@ -89,7 +89,7 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
     public abstract Property<LaunchMode> getLaunchMode();
 
     @Input
-    public abstract MapProperty<String,String> getPlatformImportProperties();
+    public abstract MapProperty<String, String> getPlatformImportProperties();
 
     /**
      * If any project task changes, we will invalidate this task anyway
@@ -189,7 +189,7 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
             if (type == TaskType.COMPILE) {
                 sourceDirs.add(new DefaultSourceDir(source, destDir, null, Map.of("compiler", task)));
             } else if (type == TaskType.RESOURCES) {
-                resources.add(new DefaultSourceDir(source, destDir,null));
+                resources.add(new DefaultSourceDir(source, destDir, null));
             }
         }
         module.addArtifactSources(new DefaultArtifactSources(classifier, sourceDirs, resources));

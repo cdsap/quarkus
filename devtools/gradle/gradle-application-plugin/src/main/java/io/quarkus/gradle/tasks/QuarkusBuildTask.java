@@ -187,7 +187,6 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
     @PathSensitive(PathSensitivity.RELATIVE)
     public abstract RegularFileProperty getApplicationModel();
 
-
     ApplicationModel resolveAppModelForBuild() {
         // Works for QuarkusBuild/QuarkusBuildCacheableParts/QuarkusBuildDependencies
         try {
@@ -256,8 +255,9 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
 
         ApplicationModel appModel = resolveAppModelForBuild();
         Map<String, String> configMap = new HashMap<>();
-        for (Map.Entry<String, String> entry : getExtensionView().buildEffectiveConfiguration(appModel.getAppArtifact()).getValues()
-            .entrySet()) {
+        for (Map.Entry<String, String> entry : getExtensionView().buildEffectiveConfiguration(appModel.getAppArtifact())
+                .getValues()
+                .entrySet()) {
             if (entry.getKey().startsWith("quarkus.")) {
                 configMap.put(entry.getKey(), entry.getValue());
             }

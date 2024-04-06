@@ -71,8 +71,8 @@ public final class EffectiveConfig {
         configSources.add(new PropertiesConfigSource(asStringMap(builder.taskProperties), "taskProperties", 500));
         configSources.add(new PropertiesConfigSource(ConfigSourceUtil.propertiesToMap(System.getProperties()),
                 "System.getProperties()", 400));
-    //    configSources.add(new EnvConfigSource(300) {
-    //    });
+        //    configSources.add(new EnvConfigSource(300) {
+        //    });
         configSources.add(new PropertiesConfigSource(builder.buildProperties, "quarkusBuildProperties", 290));
         configSources.add(new PropertiesConfigSource(asStringMap(builder.projectProperties), "projectProperties", 280));
 

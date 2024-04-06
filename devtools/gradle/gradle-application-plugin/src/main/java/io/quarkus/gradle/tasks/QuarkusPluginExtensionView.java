@@ -40,12 +40,13 @@ public abstract class QuarkusPluginExtensionView {
         getCodeGenForkOptions().set(getProviderFactory().provider(() -> extension.codeGenForkOptions));
         getIgnoredEntries().set(extension.ignoredEntriesProperty());
         getMainResources().setFrom(project.getExtensions().getByType(SourceSetContainer.class).getByName(MAIN_SOURCE_SET_NAME)
-            .getResources().getSourceDirectories());
+                .getResources().getSourceDirectories());
         getQuarkusBuildProperties().set(extension.getQuarkusBuildProperties());
         getQuarkusRelevantProjectProperties().set(getQuarkusRelevantProjectProperties(project));
         getQuarkusProfileSystemVariable().set(getProviderFactory().systemProperty(QUARKUS_PROFILE));
         getQuarkusProfileEnvVariable().set(getProviderFactory().environmentVariable("QUARKUS_PROFILE"));
-        getCachingRelevantInput().set(extension.baseConfig().cachingRelevantProperties(extension.getCachingRelevantProperties().get()));
+        getCachingRelevantInput()
+                .set(extension.baseConfig().cachingRelevantProperties(extension.getCachingRelevantProperties().get()));
         getForcedProperties().set(extension.forcedPropertiesProperty());
         getJarType().set(extension.baseConfig().jarType());
         getJarEnabled().set(extension.baseConfig().packageConfig().jar().enabled());
@@ -59,9 +60,9 @@ public abstract class QuarkusPluginExtensionView {
             return getProviderFactory().gradlePropertiesPrefixedBy("quarkus.");
         } else {
             return getProviderFactory().provider(() -> project.getProperties().entrySet().stream()
-                .filter(e -> e.getValue() != null)
-                .map(e -> Map.entry(e.getKey(), e.getValue().toString()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+                    .filter(e -> e.getValue() != null)
+                    .map(e -> Map.entry(e.getKey(), e.getValue().toString()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
         }
     }
 
@@ -76,7 +77,6 @@ public abstract class QuarkusPluginExtensionView {
 
     @Input
     public abstract Property<String> getFinalName();
-
 
     @Nested
     public abstract ListProperty<Action<? super JavaForkOptions>> getCodeGenForkOptions();
@@ -96,7 +96,6 @@ public abstract class QuarkusPluginExtensionView {
     @Input
     @Optional
     public abstract Property<Boolean> getNativeSourcesOnly();
-
 
     @Input
     public abstract ListProperty<String> getIgnoredEntries();
@@ -150,13 +149,13 @@ public abstract class QuarkusPluginExtensionView {
         BaseConfig baseConfig = new BaseConfig(effectiveConfig);
         for (Map.Entry<String, Object> attribute : baseConfig.manifest().getAttributes().entrySet()) {
             properties.put(toManifestAttributeKey(attribute.getKey()),
-                attribute.getValue());
+                    attribute.getValue());
         }
 
         for (Map.Entry<String, Attributes> section : baseConfig.manifest().getSections().entrySet()) {
             for (Map.Entry<String, Object> attribute : section.getValue().entrySet()) {
                 properties
-                    .put(toManifestSectionAttributeKey(section.getKey(), attribute.getKey()), attribute.getValue());
+                        .put(toManifestSectionAttributeKey(section.getKey(), attribute.getKey()), attribute.getValue());
             }
         }
     }
@@ -165,14 +164,14 @@ public abstract class QuarkusPluginExtensionView {
         Set<File> resourcesDirs = getMainResources().getFiles();
 
         return EffectiveConfig.builder()
-            .withForcedProperties(getQuarkusRelevantProjectProperties().get())
-            .withTaskProperties(properties)
-            .withBuildProperties(getQuarkusBuildProperties().get())
-            // TODO: Do we really need all project properties, or we can live with just quarkus properties?
-            .withProjectProperties(getQuarkusRelevantProjectProperties().get())
-            .withSourceDirectories(resourcesDirs)
-            .withProfile(getQuarkusProfile())
-            .build();
+                .withForcedProperties(getQuarkusRelevantProjectProperties().get())
+                .withTaskProperties(properties)
+                .withBuildProperties(getQuarkusBuildProperties().get())
+                // TODO: Do we really need all project properties, or we can live with just quarkus properties?
+                .withProjectProperties(getQuarkusRelevantProjectProperties().get())
+                .withSourceDirectories(resourcesDirs)
+                .withProfile(getQuarkusProfile())
+                .build();
     }
 
     private String getQuarkusProfile() {
