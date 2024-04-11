@@ -14,10 +14,8 @@ import javax.inject.Inject;
 import io.quarkus.deployment.pkg.PackageConfig;
 import io.quarkus.gradle.tasks.*;
 import io.quarkus.gradle.tasks.actions.BeforeTestAction;
-import io.quarkus.gradle.workspace.QuarkusProjectDiscoveryPlugin;
 import io.quarkus.gradle.workspace.descriptors.DefaultProjectDescriptor;
 import io.quarkus.gradle.workspace.descriptors.ProjectDescriptorBuilder;
-import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
@@ -56,7 +54,6 @@ import io.quarkus.gradle.tasks.QuarkusBuildDependencies;
 import io.quarkus.gradle.tasks.QuarkusDev;
 import io.quarkus.gradle.tasks.QuarkusGenerateCode;
 import io.quarkus.gradle.tasks.QuarkusGoOffline;
-import io.quarkus.gradle.tasks.QuarkusGradleUtils;
 import io.quarkus.gradle.tasks.QuarkusInfo;
 import io.quarkus.gradle.tasks.QuarkusListCategories;
 import io.quarkus.gradle.tasks.QuarkusListExtensions;
@@ -82,7 +79,6 @@ public class QuarkusPlugin implements Plugin<Project> {
 
     public static final String ID = "io.quarkus";
     public static final String DEFAULT_OUTPUT_DIRECTORY = "quarkus-app";
-    public static final String QUARKUS_PACKAGE_TYPE = "quarkus.package.type"; // constant left here to not break potential users
 
     public static final String EXTENSION_NAME = "quarkus";
     public static final String LIST_EXTENSIONS_TASK_NAME = "listExtensions";
@@ -138,18 +134,6 @@ public class QuarkusPlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {
         verifyGradleVersion();
-        project.getRootProject().getGradle().afterProject(target -> {
-            if (target.getParent() != null) {
-                // Not a root project
-                return;
-            }
-            target.allprojects(project1 -> {
-                // Do not apply any other logic here,
-                // since it will be applied to all projects and will be problematic later
-                // with Gradle isolated-projects
-                project1.getPluginManager().apply(QuarkusProjectDiscoveryPlugin.class);
-            });
-        });
 
         // Apply the `java` plugin
         project.getPluginManager().apply(JavaPlugin.class);
