@@ -5,7 +5,6 @@ import static io.smallrye.common.expression.Expression.Flag.DOUBLE_COLON;
 import static io.smallrye.common.expression.Expression.Flag.LENIENT_SYNTAX;
 import static io.smallrye.common.expression.Expression.Flag.NO_SMART_BRACES;
 import static io.smallrye.common.expression.Expression.Flag.NO_TRIM;
-import static java.util.Collections.emptyList;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -16,8 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import io.quarkus.gradle.config.QuarkusEnvVariableValueSource;
-import io.quarkus.gradle.config.QuarkusSystemPropertyValueSource;
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
@@ -26,7 +23,6 @@ import org.gradle.api.java.archives.Attributes;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.process.JavaForkOptions;
 
@@ -54,8 +50,6 @@ public abstract class AbstractQuarkusExtension {
     private final Property<BaseConfig> baseConfig;
     protected final List<Action<? super JavaForkOptions>> codeGenForkOptions;
     protected final List<Action<? super JavaForkOptions>> buildForkOptions;
-    private final Provider<Map<String, String>> envVariables;
-    private final Provider<Map<String, String>> systemProperties;
 
     protected AbstractQuarkusExtension(Project project) {
         this.project = project;
@@ -67,10 +61,6 @@ public abstract class AbstractQuarkusExtension {
         this.cachingRelevantProperties = project.getObjects().listProperty(String.class).value(List.of("quarkus[.].*"));
         this.ignoredEntries = project.getObjects().listProperty(String.class);
         this.baseConfig = project.getObjects().property(BaseConfig.class).value(project.provider(this::buildBaseConfig));
-        this.envVariables = project.getProviders().of(QuarkusEnvVariableValueSource.class,
-                spec -> spec.parameters(parameters -> parameters.getPatterns().set(cachingRelevantProperties)));
-        this.systemProperties = project.getProviders().of(QuarkusSystemPropertyValueSource.class,
-                spec -> spec.parameters(parameters -> parameters.getPatterns().set(cachingRelevantProperties)));
         SourceSet mainSourceSet = getSourceSet(project, SourceSet.MAIN_SOURCE_SET_NAME);
         this.classpath = dependencyClasspath(mainSourceSet);
         this.codeGenForkOptions = new ArrayList<>();

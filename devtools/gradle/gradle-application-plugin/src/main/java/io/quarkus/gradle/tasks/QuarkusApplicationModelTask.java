@@ -59,7 +59,7 @@ import io.quarkus.paths.PathList;
 import io.quarkus.runtime.LaunchMode;
 import io.quarkus.runtime.util.HashUtil;
 
-@DisableCachingByDefault(because = "This task is saved absolute paths in inputs, so it might not be a good candidate for Build cache")
+@CacheableTask
 public abstract class QuarkusApplicationModelTask extends DefaultTask {
 
     /* @formatter:off */
@@ -309,27 +309,6 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
             }
 
             PathCollection paths = null;
-            if (resolvedDependency.getSelected().getId() instanceof ProjectComponentIdentifier) {
-                String projectPath = ((ProjectComponentIdentifier) resolvedDependency.getSelected().getId()).getProjectPath();
-                ProjectDescriptor projectDescriptor = projectDescriptors.get(projectPath);
-                PathList.Builder pathBuilder = PathList.builder();
-                if (classifier.isEmpty()) {
-                    projectModule = initProjectModuleAndBuildPaths(projectDescriptor, resolvedDependency, modelBuilder,
-                            depBuilder,
-                            pathBuilder, SourceSet.MAIN_SOURCE_SET_NAME, classifier);
-                    paths = pathBuilder.build();
-                } else if (classifier.equals("tests") || classifier.equals("test")) {
-                    projectModule = initProjectModuleAndBuildPaths(projectDescriptor, resolvedDependency, modelBuilder,
-                            depBuilder,
-                            pathBuilder, SourceSet.TEST_SOURCE_SET_NAME, classifier);
-                    paths = pathBuilder.build();
-                } else if (classifier.equals("test-fixtures")) {
-                    projectModule = initProjectModuleAndBuildPaths(projectDescriptor, resolvedDependency, modelBuilder,
-                            depBuilder,
-                            pathBuilder, "test-fixtures", classifier);
-                    paths = pathBuilder.build();
-                }
-            }
 
             depBuilder.setResolvedPaths(paths == null ? PathList.of(artifact.file.toPath()) : paths)
                     .setWorkspaceModule(projectModule);
