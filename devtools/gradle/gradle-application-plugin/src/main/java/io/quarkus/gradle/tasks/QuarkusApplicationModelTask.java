@@ -10,13 +10,13 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
+import org.gradle.api.artifacts.ArtifactCollection;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ModuleVersionIdentifier;
 import org.gradle.api.artifacts.ResolvableDependencies;
@@ -28,16 +28,13 @@ import org.gradle.api.artifacts.result.ResolvedArtifactResult;
 import org.gradle.api.artifacts.result.ResolvedComponentResult;
 import org.gradle.api.artifacts.result.ResolvedDependencyResult;
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
-import org.gradle.api.attributes.Attribute;
 import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.*;
-import org.gradle.work.DisableCachingByDefault;
 
 import com.google.common.base.Preconditions;
 
@@ -75,6 +72,13 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
 
     @Inject
     public abstract ProjectLayout getLayout();
+
+    /**
+     * Used just to track original classpath as an input, since resolving quarkus classpath is kinda expensive,
+     * and we don't want to do that if task is up-to-date
+     */
+    @CompileClasspath
+    public abstract ConfigurableFileCollection getOriginalClasspath();
 
     @Nested
     public abstract QuarkusResolvedClasspath getPlatformConfiguration();
@@ -432,14 +436,13 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
     }
 
     private static String resolveClassifier(ModuleVersionIdentifier moduleVersionIdentifier, File file) {
-        String moduleGroupName = moduleVersionIdentifier.getVersion().isEmpty()
+        String artifactIdVersion = moduleVersionIdentifier.getVersion().isEmpty()
                 || "unspecified".equals(moduleVersionIdentifier.getVersion())
-                        ? moduleVersionIdentifier.getGroup() + ":" + moduleVersionIdentifier.getName()
-                        : moduleVersionIdentifier.getGroup() + ":" + moduleVersionIdentifier.getName() + ":"
-                                + moduleVersionIdentifier.getVersion();
+                        ? moduleVersionIdentifier.getName()
+                        : moduleVersionIdentifier.getName() + "-" + moduleVersionIdentifier.getVersion();
         if ((file.getName().endsWith(".jar") || file.getName().endsWith(".pom"))
-                && file.getName().startsWith(moduleGroupName + "-")) {
-            return file.getName().substring(moduleGroupName.length() + 1, file.getName().length() - 4);
+                && file.getName().startsWith(artifactIdVersion + "-")) {
+            return file.getName().substring(artifactIdVersion.length() + 1, file.getName().length() - 4);
         }
         return "";
     }
@@ -463,37 +466,49 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
     public static abstract class QuarkusResolvedClasspath {
 
         /**
-         * Internal, since we track input via original configuration.
-         * This makes sure, that the quarkus resolution doesn't kick in, when original configuration doesn't change.
-         */
-        @InputFiles
-        @PathSensitive(PathSensitivity.RELATIVE)
-        public abstract ConfigurableFileCollection getAllResolvedFiles();
-
-        /**
-         * Can be Internal, since we track configuration via all resolved files.
+         * Internal since we track defined dependencies via {@link QuarkusApplicationModelTask#getOriginalClasspath}
          */
         @Internal
         public abstract Property<ResolvedComponentResult> getRoot();
 
         /**
-         * Can be Internal, since we track configuration via all resolved files.
+         * Internal since we track defined dependencies via {@link QuarkusApplicationModelTask#getOriginalClasspath}
          */
         @Internal
-        public abstract ListProperty<QuarkusResolvedArtifact> getResolvedArtifacts();
+        public abstract Property<ArtifactCollection> getResolvedArtifactCollection();
 
-        @InputFiles
-        @PathSensitive(PathSensitivity.RELATIVE)
+        /**
+         * TODO: Remove me
+         */
+        @Internal
         public abstract ConfigurableFileCollection getProjectDescriptors();
+
+        private FileCollection getAllResolvedFiles() {
+            return getResolvedArtifactCollection().get().getArtifactFiles();
+        }
+
+        private Map<ComponentIdentifier, List<QuarkusResolvedArtifact>> resolvedArtifactsByComponentIdentifier() {
+            return getQuarkusResolvedArtifacts().stream()
+                    .collect(Collectors.groupingBy(artifact -> artifact.getId().getComponentIdentifier()));
+        }
+
+        private List<QuarkusResolvedArtifact> getQuarkusResolvedArtifacts() {
+            return getResolvedArtifactCollection().get().getArtifacts().stream()
+                    .map(this::toResolvedArtifact)
+                    .collect(toList());
+        }
+
+        private QuarkusResolvedArtifact toResolvedArtifact(ResolvedArtifactResult result) {
+            String type = result.getVariant().getAttributes().getAttribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE);
+            File file = result.getFile();
+            return new QuarkusResolvedArtifact(result.getId(), file, type);
+        }
 
         public void configureFrom(Configuration configuration) {
             ResolvableDependencies resolvableDependencies = configuration.getIncoming();
             getRoot().set(resolvableDependencies.getResolutionResult().getRootComponent());
-            Provider<Set<ResolvedArtifactResult>> resolvedArtifacts = resolvableDependencies.getArtifacts()
-                    .getResolvedArtifacts();
-            getResolvedArtifacts()
-                    .set(resolvedArtifacts.map(result -> result.stream().map(this::toResolvedArtifact).collect(toList())));
-            getAllResolvedFiles().setFrom(configuration);
+            getResolvedArtifactCollection().set(resolvableDependencies.getArtifacts());
+            // TODO: Remove me, since we don't apply workspace plugin anymore, so there are no project descriptors
             getProjectDescriptors().setFrom(configuration.getIncoming().artifactView(viewConfiguration -> {
                 // Project descriptors make sense only for projects
                 viewConfiguration.withVariantReselection();
@@ -501,17 +516,6 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
                 viewConfiguration.attributes(attributes -> attributes.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
                         QUARKUS_PROJECT_DESCRIPTOR_ARTIFACT_TYPE));
             }).getFiles());
-        }
-
-        private QuarkusResolvedArtifact toResolvedArtifact(ResolvedArtifactResult result) {
-            String type = result.getVariant().getAttributes().getAttribute(Attribute.of("artifactType", String.class));
-            File file = result.getFile();
-            return new QuarkusResolvedArtifact(result.getId(), file, type);
-        }
-
-        public Map<ComponentIdentifier, List<QuarkusResolvedArtifact>> resolvedArtifactsByComponentIdentifier() {
-            return getResolvedArtifacts().get().stream()
-                    .collect(Collectors.groupingBy(artifact -> artifact.getId().getComponentIdentifier()));
         }
     }
 

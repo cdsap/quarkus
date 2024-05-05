@@ -1,5 +1,8 @@
 package io.quarkus.gradle;
 
+import static io.quarkus.gradle.extension.QuarkusPluginExtension.combinedOutputSourceDirs;
+import static io.quarkus.gradle.tasks.QuarkusGradleUtils.getSourceSet;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -11,11 +14,6 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
-import io.quarkus.deployment.pkg.PackageConfig;
-import io.quarkus.gradle.tasks.*;
-import io.quarkus.gradle.tasks.actions.BeforeTestAction;
-import io.quarkus.gradle.workspace.descriptors.DefaultProjectDescriptor;
-import io.quarkus.gradle.workspace.descriptors.ProjectDescriptorBuilder;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
@@ -41,16 +39,20 @@ import org.gradle.api.tasks.testing.Test;
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry;
 import org.gradle.util.GradleVersion;
 
+import io.quarkus.deployment.pkg.PackageConfig;
 import io.quarkus.gradle.dependency.ApplicationDeploymentClasspathBuilder;
 import io.quarkus.gradle.extension.QuarkusPluginExtension;
 import io.quarkus.gradle.extension.SourceSetExtension;
+import io.quarkus.gradle.tasks.BaseConfig;
 import io.quarkus.gradle.tasks.Deploy;
 import io.quarkus.gradle.tasks.ImageBuild;
 import io.quarkus.gradle.tasks.ImagePush;
 import io.quarkus.gradle.tasks.QuarkusAddExtension;
+import io.quarkus.gradle.tasks.QuarkusApplicationModelTask;
 import io.quarkus.gradle.tasks.QuarkusBuild;
 import io.quarkus.gradle.tasks.QuarkusBuildCacheableAppParts;
 import io.quarkus.gradle.tasks.QuarkusBuildDependencies;
+import io.quarkus.gradle.tasks.QuarkusBuildTask;
 import io.quarkus.gradle.tasks.QuarkusDev;
 import io.quarkus.gradle.tasks.QuarkusGenerateCode;
 import io.quarkus.gradle.tasks.QuarkusGoOffline;
@@ -65,15 +67,15 @@ import io.quarkus.gradle.tasks.QuarkusShowEffectiveConfig;
 import io.quarkus.gradle.tasks.QuarkusTest;
 import io.quarkus.gradle.tasks.QuarkusTestConfig;
 import io.quarkus.gradle.tasks.QuarkusUpdate;
+import io.quarkus.gradle.tasks.actions.BeforeTestAction;
 import io.quarkus.gradle.tooling.GradleApplicationModelBuilder;
 import io.quarkus.gradle.tooling.ToolingUtils;
 import io.quarkus.gradle.tooling.dependency.DependencyUtils;
 import io.quarkus.gradle.tooling.dependency.ExtensionDependency;
 import io.quarkus.gradle.tooling.dependency.ProjectExtensionDependency;
+import io.quarkus.gradle.workspace.descriptors.DefaultProjectDescriptor;
+import io.quarkus.gradle.workspace.descriptors.ProjectDescriptorBuilder;
 import io.quarkus.runtime.LaunchMode;
-
-import static io.quarkus.gradle.extension.QuarkusPluginExtension.combinedOutputSourceDirs;
-import static io.quarkus.gradle.tasks.QuarkusGradleUtils.getSourceSet;
 
 public class QuarkusPlugin implements Plugin<Project> {
 
@@ -173,17 +175,19 @@ public class QuarkusPlugin implements Plugin<Project> {
         });
 
         Provider<DefaultProjectDescriptor> projectDescriptor = ProjectDescriptorBuilder.buildForApp(project);
-        ApplicationDeploymentClasspathBuilder classpath = new ApplicationDeploymentClasspathBuilder(project, LaunchMode.TEST);
+        ApplicationDeploymentClasspathBuilder testClasspath = new ApplicationDeploymentClasspathBuilder(project,
+                LaunchMode.TEST);
         TaskProvider<QuarkusApplicationModelTask> quarkusGenerateTestAppModelTask = tasks.register(
                 "quarkusGenerateTestAppModel",
                 QuarkusApplicationModelTask.class, task -> {
                     task.getProjectDescriptor().set(projectDescriptor);
                     task.getLaunchMode().set(LaunchMode.TEST);
                     task.getQuarkusBootstrapDiscovery().set(false); // Set to false for now
-                    task.getAppClasspath().configureFrom(classpath.getRawRuntimeConfiguration());
-                    task.getPlatformConfiguration().configureFrom(classpath.getPlatformConfiguration());
-                    task.getDeploymentClasspath().configureFrom(classpath.getDeploymentConfiguration());
-                    task.getPlatformImportProperties().set(classpath.getPlatformImports().getPlatformProperties());
+                    task.getOriginalClasspath().setFrom(testClasspath.getOriginalRuntimeClasspathAsInput());
+                    task.getAppClasspath().configureFrom(testClasspath.getRawRuntimeConfiguration());
+                    task.getPlatformConfiguration().configureFrom(testClasspath.getPlatformConfiguration());
+                    task.getDeploymentClasspath().configureFrom(testClasspath.getDeploymentConfiguration());
+                    task.getPlatformImportProperties().set(testClasspath.getPlatformImports().getPlatformProperties());
                     task.getApplicationModel().set(
                             project.getLayout().getBuildDirectory()
                                     .file("quarkus/application-model/quarkus-app-test-model.dat"));
@@ -194,11 +198,12 @@ public class QuarkusPlugin implements Plugin<Project> {
                 QuarkusApplicationModelTask.class, task -> {
                     task.getProjectDescriptor().set(projectDescriptor);
                     task.getLaunchMode().set(LaunchMode.DEVELOPMENT);
-                    task.getPlatformImportProperties().set(classpath.getPlatformImports().getPlatformProperties());
                     task.getQuarkusBootstrapDiscovery().set(false); // Set to false for now
+                    task.getOriginalClasspath().setFrom(devClasspath.getOriginalRuntimeClasspathAsInput());
                     task.getAppClasspath().configureFrom(devClasspath.getRawRuntimeConfiguration());
                     task.getPlatformConfiguration().configureFrom(devClasspath.getPlatformConfiguration());
                     task.getDeploymentClasspath().configureFrom(devClasspath.getDeploymentConfiguration());
+                    task.getPlatformImportProperties().set(devClasspath.getPlatformImports().getPlatformProperties());
                     task.getApplicationModel().set(
                             project.getLayout().getBuildDirectory()
                                     .file("quarkus/application-model/quarkus-app-dev-model.dat"));
@@ -211,12 +216,12 @@ public class QuarkusPlugin implements Plugin<Project> {
                     task.getProjectDescriptor().set(projectDescriptor
                             .map(d -> d.withSourceSetView(Collections.singleton(SourceSet.MAIN_SOURCE_SET_NAME))));
                     task.getLaunchMode().set(LaunchMode.NORMAL);
-                    task.getPlatformImportProperties().set(classpath.getPlatformImports().getPlatformProperties());
-
                     task.getQuarkusBootstrapDiscovery().set(false); // Set to false for now
+                    task.getOriginalClasspath().setFrom(normalClasspath.getOriginalRuntimeClasspathAsInput());
                     task.getAppClasspath().configureFrom(normalClasspath.getRawRuntimeConfiguration());
                     task.getPlatformConfiguration().configureFrom(normalClasspath.getPlatformConfiguration());
                     task.getDeploymentClasspath().configureFrom(normalClasspath.getDeploymentConfiguration());
+                    task.getPlatformImportProperties().set(normalClasspath.getPlatformImports().getPlatformProperties());
                     task.getApplicationModel().set(
                             project.getLayout().getBuildDirectory().file("quarkus/application-model/quarkus-app-model.dat"));
                 });
@@ -251,12 +256,13 @@ public class QuarkusPlugin implements Plugin<Project> {
                     task.getProjectDescriptor().set(projectDescriptor
                             .map(d -> d.withSourceSetView(Collections.singleton(SourceSet.MAIN_SOURCE_SET_NAME))));
                     task.getLaunchMode().set(LaunchMode.NORMAL);
-                    task.getPlatformImportProperties().set(classpath.getPlatformImports().getPlatformProperties());
 
                     task.getQuarkusBootstrapDiscovery().set(false); // Set to false for now
+                    task.getOriginalClasspath().setFrom(normalClasspath.getOriginalRuntimeClasspathAsInput());
                     task.getAppClasspath().configureFrom(normalClasspath.getRawRuntimeConfiguration());
                     task.getPlatformConfiguration().configureFrom(normalClasspath.getPlatformConfiguration());
                     task.getDeploymentClasspath().configureFrom(normalClasspath.getDeploymentConfiguration());
+                    task.getPlatformImportProperties().set(normalClasspath.getPlatformImports().getPlatformProperties());
                     task.dependsOn(tasks.named(JavaPlugin.CLASSES_TASK_NAME));
 
                     task.getApplicationModel().set(
