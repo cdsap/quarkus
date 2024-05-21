@@ -228,6 +228,7 @@ public class QuarkusPlugin implements Plugin<Project> {
 
         TaskProvider<QuarkusApplicationModelTask> quarkusBuildAppModelTask = tasks.register("quarkusBuildAppModel",
                 QuarkusApplicationModelTask.class, task -> {
+                task.dependsOn(tasks.named(JavaPlugin.CLASSES_TASK_NAME));
                 configureApplicationModelTask(project, task, projectDescriptor
                         .map(d -> d.withSourceSetView(Collections.singleton(SourceSet.MAIN_SOURCE_SET_NAME))), normalClasspath,LaunchMode.NORMAL,
                     "quarkus/application-model/quarkus-app-model-build.dat");
