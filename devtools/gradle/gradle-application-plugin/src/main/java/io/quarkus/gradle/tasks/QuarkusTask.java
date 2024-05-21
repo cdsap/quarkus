@@ -11,6 +11,7 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.tasks.Nested;
 import org.gradle.process.JavaForkOptions;
 import org.gradle.workers.ProcessWorkerSpec;
 import org.gradle.workers.WorkQueue;
@@ -23,19 +24,35 @@ public abstract class QuarkusTask extends DefaultTask {
     private static final List<String> WORKER_BUILD_FORK_OPTIONS = List.of("quarkus.");
 
     private final transient QuarkusPluginExtension extension;
+    private final QuarkusPluginExtensionView extensionView;
     protected final File projectDir;
     protected final File buildDir;
 
     QuarkusTask(String description) {
+        this(description, false);
+    }
+
+    QuarkusTask(String description, boolean configurationCacheCompatible) {
         setDescription(description);
         setGroup("quarkus");
         this.extension = getProject().getExtensions().findByType(QuarkusPluginExtension.class);
         this.projectDir = getProject().getProjectDir();
         this.buildDir = getProject().getBuildDir();
+        this.extensionView = getProject().getObjects().newInstance(QuarkusPluginExtensionView.class, extension);
 
         // Calling this method tells Gradle that it should not fail the build. Side effect is that the configuration
         // cache will be at least degraded, but the build will not fail.
-        notCompatibleWithConfigurationCache("The Quarkus Plugin isn't compatible with the configuration cache");
+        if (!configurationCacheCompatible) {
+            notCompatibleWithConfigurationCache("The Quarkus Plugin isn't compatible with the configuration cache");
+        }
+    }
+
+    /**
+     * Returns a view of the Quarkus extension that is compatible with the configuration cache.
+     */
+    @Nested
+    protected QuarkusPluginExtensionView getExtensionView() {
+        return extensionView;
     }
 
     @Inject
@@ -45,7 +62,7 @@ public abstract class QuarkusTask extends DefaultTask {
         return extension;
     }
 
-    WorkQueue workQueue(Map<String, String> configMap, Supplier<List<Action<? super JavaForkOptions>>> forkOptionsActions) {
+    WorkQueue workQueue(Map<String, String> configMap, List<Action<? super JavaForkOptions>> forkOptionsSupplier) {
         WorkerExecutor workerExecutor = getWorkerExecutor();
 
         // Use process isolation by default, unless Gradle's started with its debugging system property or the
@@ -55,7 +72,7 @@ public abstract class QuarkusTask extends DefaultTask {
         }
 
         return workerExecutor.processIsolation(processWorkerSpec -> configureProcessWorkerSpec(processWorkerSpec,
-                configMap, forkOptionsActions.get()));
+                configMap, forkOptionsSupplier));
     }
 
     private void configureProcessWorkerSpec(ProcessWorkerSpec processWorkerSpec, Map<String, String> configMap,

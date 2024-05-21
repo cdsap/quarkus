@@ -1,99 +1,36 @@
-= Quarkus Gradle Support
-:app-plugin-path: ./gradle-application-plugin
-:extension-plugin-path: ./gradle-extension-plugin
+= Proposal compatibility Configuration Cache
 
-Gradle plugins for building xref:{app-plugin-path}/README.adoc[Quarkus applications] and
-building xref:{extension-plugin-path}/README.adoc[Quarkus extensions].
+== Introduction
 
+The current Quarkus Gradle Plugin implementation does not support the Gradle Configuration Cache feature. This feature is important to improve the build time of the project, especially when the project has a large number of modules.
+We observed different problems like:
 
-[[dev]]
-== Develop
+* Project usage in the task actions
+* Invalid configuration resolution
 
-Before starting development on these plugins, be sure to have <<build,built>> the project.
+This proposal aims to implement the Gradle Configuration Cache feature in the Quarkus Gradle Plugin.
+The scope of this proposal cover the tasks:
 
-For IntelliJ users, see the notes for <<importing-intellij,importing>> the project.
+* `quarkusGenerateCode`
+* `quarkusBuild`
+* `quarkusBuildDependencies`
+* `quarkusBuildCacheableAppParts`
 
-Be sure to see the notes about <<testing,testing>> your changes.
+=== Implementation
+Instead of initializing the `ApplicationModel` during the task action, we provide a `QuarkusApplicationModelTask` that creates and serializes the `ApplicationModel` to a file.
+Quarkus tasks compatible with Configuration cache define an input property representing the `ApplicationModel`, during the task action
+the model is deserialized.
+Additionally, this proposal updates the resolution logic with the compatible types required for configuration cache.
 
+== Usage
+We have published a snapshot compatible with Quarkus 3.10.1 version:
 
-[[build]]
-== Building
+`build-logic/settings.gradle.kts`
+```
+maven { url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+```
 
-Generally, after each pull or rebase the entire project should be built:
-
-[source]
-----
-./mvnw -Dquickly
-----
-
-This builds the entire Quarkus codebase and publishes everything to mavenLocal.
-
-From there, this project works like any normal Gradle build.  Run Gradle commands here
-or any of the subprojects.
-
-However, see the important notes about <<testing, testing>>.
-
-
-[[testing]]
-== Running Tests
-
-Each subproject defines its own set of tests which can just be run using normal Gradle operations.
-
-There are also integration tests located in `integration-tests/gradle`.
-
-[IMPORTANT]
-====
-Before running integration tests, it is important that the entire Quarkus codebase be <<build,built>>
-and published into mavenLocal.
-====
-
-To run the integration tests, from the `integration-tests/gradle` directory:
-
-[source, bash]
-----
-./mvnw test
-----
-
-A single integration test can be run by itself:
-
-[source, bash]
-----
-./mvnw test -Dtest=<test-class-name>
-----
-
-[NOTE]
-====
-See <<alt-testing>> for an alternative approach to integration testing.
-====
-
-
-[[importing-intellij]]
-== Importing using Intellij
-
-Disable "Maven Auto Import" for the Quarkus projects. Since the Gradle plugin has a pom.xml,
-IntelliJ will configure this project as a Maven project. You need to configure it to be a Gradle
-project. To do so, follow these instructions:
-
-. Go to File -&gt; Project Structure
-. In Modules, remove the `quarkus-gradle-plugin` and re-import as a Gradle project.
-
-
-[[alt-testing]]
-== Alternative Testing
-
-Another option for testing the plugin is to create a local project that uses the plugin and the features you are working on.
-
-Again, be sure the entire project is <<build,built>>, then run the following:
-
-[source,bash]
-----
-    mvn io.quarkus:quarkus-maven-plugin:999-SNAPSHOT:create \
-        -DprojectGroupId=${groupName} \
-        -DprojectArtifactId=${name} \
-        -DclassName="org.acme.quickstart.GreetingResource" \
-        -DplatformArtifactId=quarkus-bom \
-        -Dpath="/hello" \
-        -DbuildTool=gradle
-----
-
-Follow the instructions in the https://quarkus.io/guides/gradle-tooling[Gradle Tooling Guide] for more information about the available commands.
+`build-logic/build.gradle.kts`
+```
+implementation("io.github.cdsap:gradle-application-plugin:3.10.1-conf-cache-SNAPSHOT")
+```
