@@ -73,7 +73,8 @@ public final class EffectiveConfig {
                 "System.getProperties()", 400));
         //  Commented the EnvConfigSource because configuration cache is invalidated on every build because:
         //  "Calculating task graph as configuration cache cannot be reused because environment variable 'APP_ICON_65671' has changed."
-        configSources.add(new EnvConfigSource(300) {});
+        configSources.add(new EnvConfigSource(300) {
+        });
         configSources.add(new PropertiesConfigSource(builder.buildProperties, "quarkusBuildProperties", 290));
         configSources.add(new PropertiesConfigSource(asStringMap(builder.projectProperties), "projectProperties", 280));
 
