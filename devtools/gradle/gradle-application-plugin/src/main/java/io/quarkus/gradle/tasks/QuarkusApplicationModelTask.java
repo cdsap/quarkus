@@ -413,9 +413,10 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
                 || "unspecified".equals(moduleVersionIdentifier.getVersion())
                         ? moduleVersionIdentifier.getName()
                         : moduleVersionIdentifier.getName() + "-" + moduleVersionIdentifier.getVersion();
-        if ((file.getName().endsWith(".jar") || file.getName().endsWith(".pom"))
+        if ((file.getName().endsWith(".jar") || file.getName().endsWith(".pom") || file.getName().endsWith(".exe"))
                 && file.getName().startsWith(artifactIdVersion + "-")) {
-            return file.getName().substring(artifactIdVersion.length() + 1, file.getName().length() - 4);
+            int extensionLength = file.getName().endsWith(".exe") ? 4 : 4;
+            return file.getName().substring(artifactIdVersion.length() + 1, file.getName().length() - extensionLength);
         }
         return "";
     }
