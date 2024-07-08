@@ -502,6 +502,7 @@ public class QuarkusPlugin implements Plugin<Project> {
         task.setCompileClasspath(mainSourceSet.getCompileClasspath().plus(mainSourceSet.getRuntimeClasspath())
                 .plus(mainSourceSet.getAnnotationProcessorPath())
                 .plus(mainSourceSet.getResources()));
+        task.getJarType().set(quarkusExt.baseConfig().jarType());
     }
 
     private static void configureGenerateCodeTask(QuarkusGenerateCode task,

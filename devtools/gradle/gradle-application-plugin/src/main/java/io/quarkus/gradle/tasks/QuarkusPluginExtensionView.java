@@ -1,13 +1,11 @@
 package io.quarkus.gradle.tasks;
 
 import static io.quarkus.gradle.tasks.AbstractQuarkusExtension.*;
+import static io.smallrye.common.expression.Expression.Flag.*;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 
 import java.io.File;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -18,12 +16,14 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.java.archives.Attributes;
 import org.gradle.api.provider.*;
 import org.gradle.api.tasks.*;
+import org.gradle.api.tasks.Optional;
 import org.gradle.process.JavaForkOptions;
 import org.gradle.util.GradleVersion;
 
-import io.quarkus.deployment.pkg.PackageConfig;
+import io.quarkus.gradle.dsl.Manifest;
 import io.quarkus.gradle.extension.QuarkusPluginExtension;
 import io.quarkus.maven.dependency.ResolvedDependency;
+import io.smallrye.common.expression.Expression;
 
 /**
  * Configuration cache compatible view of Quarkus extension
@@ -46,10 +46,20 @@ public abstract class QuarkusPluginExtensionView {
         getCachingRelevantInput()
                 .set(extension.baseConfig().cachingRelevantProperties(extension.getCachingRelevantProperties().get()));
         getForcedProperties().set(extension.forcedPropertiesProperty());
-        getJarType().set(extension.baseConfig().jarType());
+        Map<String, Object> projectProperties = new HashMap<>();
+        for (Map.Entry<String, ?> entry : project.getProperties().entrySet()) {
+            if ((entry.getKey().startsWith("quarkus.") || entry.getKey().startsWith("platform.quarkus."))) {
+                projectProperties.put(entry.getKey(), entry.getValue());
+            }
+
+        }
+        getProjectProperties().set(projectProperties);
         getJarEnabled().set(extension.baseConfig().packageConfig().jar().enabled());
+        getManifestAttributes().set(extension.manifest().getAttributes());
+        getManifestSections().set(extension.manifest().getSections());
         getNativeEnabled().set(extension.baseConfig().nativeConfig().enabled());
         getNativeSourcesOnly().set(extension.baseConfig().nativeConfig().sourcesOnly());
+
     }
 
     private Provider<Map<String, String>> getQuarkusRelevantProjectProperties(Project project) {
@@ -76,12 +86,11 @@ public abstract class QuarkusPluginExtensionView {
     @Input
     public abstract Property<String> getFinalName();
 
+    @Input
+    public abstract MapProperty<String, Object> getProjectProperties();
+
     @Nested
     public abstract ListProperty<Action<? super JavaForkOptions>> getCodeGenForkOptions();
-
-    @Input
-    @Optional
-    public abstract Property<PackageConfig.JarConfig.JarType> getJarType();
 
     @Input
     @Optional
@@ -90,6 +99,10 @@ public abstract class QuarkusPluginExtensionView {
     @Input
     @Optional
     public abstract Property<Boolean> getNativeEnabled();
+
+    @Input
+    @Optional
+    public abstract Property<Manifest> getManifest();
 
     @Input
     @Optional
@@ -123,13 +136,37 @@ public abstract class QuarkusPluginExtensionView {
     @Optional
     public abstract MapProperty<String, String> getForcedProperties();
 
+    @Input
+    @Optional
+    public abstract MapProperty<String, Object> getManifestAttributes();
+
+    @Input
+    @Optional
+    public abstract MapProperty<String, Attributes> getManifestSections();
+
     /**
      * TODO: Move out of this class?
      */
+
+    private void exportCustomManifestProperties(Map<String, Object> properties) {
+        for (Map.Entry<String, Object> attribute : getManifestAttributes().get().entrySet()) {
+            properties.put(toManifestAttributeKey(attribute.getKey()),
+                    attribute.getValue());
+        }
+
+        for (Map.Entry<String, Attributes> section : getManifestSections().get().entrySet()) {
+            for (Map.Entry<String, Object> attribute : section.getValue().entrySet()) {
+                properties
+                        .put(toManifestSectionAttributeKey(section.getKey(), attribute.getKey()), attribute.getValue());
+            }
+        }
+    }
+
     protected EffectiveConfig buildEffectiveConfiguration(ResolvedDependency appArtifact) {
         Map<String, Object> properties = new HashMap<>();
 
         exportCustomManifestProperties(properties);
+        buildSystemProperties(appArtifact, getQuarkusBuildProperties().get(), getForcedProperties());
 
         String userIgnoredEntries = String.join(",", getIgnoredEntries().get());
         if (!userIgnoredEntries.isEmpty()) {
@@ -142,20 +179,55 @@ public abstract class QuarkusPluginExtensionView {
         return buildEffectiveConfiguration(properties);
     }
 
-    private void exportCustomManifestProperties(Map<String, Object> properties) {
-        EffectiveConfig effectiveConfig = buildEffectiveConfiguration(Collections.emptyMap());
-        BaseConfig baseConfig = new BaseConfig(effectiveConfig);
-        for (Map.Entry<String, Object> attribute : baseConfig.manifest().getAttributes().entrySet()) {
-            properties.put(toManifestAttributeKey(attribute.getKey()),
-                    attribute.getValue());
-        }
+    protected Map<String, String> buildSystemProperties(ResolvedDependency appArtifact, Map<String, String> quarkusProperties,
+            MapProperty<String, String> forcedProperties) {
+        Map<String, String> buildSystemProperties = new HashMap<>();
+        buildSystemProperties.putIfAbsent("quarkus.application.name", appArtifact.getArtifactId());
+        buildSystemProperties.putIfAbsent("quarkus.application.version", appArtifact.getVersion());
 
-        for (Map.Entry<String, Attributes> section : baseConfig.manifest().getSections().entrySet()) {
-            for (Map.Entry<String, Object> attribute : section.getValue().entrySet()) {
-                properties
-                        .put(toManifestSectionAttributeKey(section.getKey(), attribute.getKey()), attribute.getValue());
+        for (Map.Entry<String, String> entry : forcedProperties.get().entrySet()) {
+            if (entry.getKey().startsWith("quarkus.") || entry.getKey().startsWith("platform.quarkus.")) {
+                buildSystemProperties.put(entry.getKey(), entry.getValue());
             }
         }
+        for (Map.Entry<String, String> entry : quarkusProperties.entrySet()) {
+            if (entry.getKey().startsWith("quarkus.") || entry.getKey().startsWith("platform.quarkus.")) {
+                buildSystemProperties.put(entry.getKey(), entry.getValue());
+            }
+        }
+        for (Map.Entry<String, ?> entry : getProjectProperties().get().entrySet()) {
+            if ((entry.getKey().startsWith("quarkus.") || entry.getKey().startsWith("platform.quarkus."))
+                    && entry.getValue() != null) {
+                buildSystemProperties.put(entry.getKey(), entry.getValue().toString());
+            }
+        }
+
+        Set<String> quarkusValues = new HashSet<>();
+        quarkusValues.addAll(quarkusProperties.values());
+        quarkusValues.addAll(buildSystemProperties.values());
+
+        for (String value : quarkusValues) {
+            Expression expression = Expression.compile(value, LENIENT_SYNTAX, NO_TRIM, NO_SMART_BRACES, DOUBLE_COLON);
+            for (String reference : expression.getReferencedStrings()) {
+                String expanded = forcedProperties.get().get(reference);
+                if (expanded != null) {
+                    buildSystemProperties.put(reference, expanded);
+                    continue;
+                }
+
+                expanded = quarkusProperties.get(reference);
+                if (expanded != null) {
+                    buildSystemProperties.put(reference, expanded);
+                    continue;
+                }
+                expanded = (String) getProjectProperties().get().get(reference);
+                if (expanded != null) {
+                    buildSystemProperties.put(reference, expanded);
+                }
+            }
+        }
+
+        return buildSystemProperties;
     }
 
     private EffectiveConfig buildEffectiveConfiguration(Map<String, Object> properties) {

@@ -1,7 +1,5 @@
 package io.quarkus.gradle.tasks;
 
-import static io.quarkus.deployment.pkg.PackageConfig.JarConfig.JarType.UBER_JAR;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,6 +16,7 @@ import org.gradle.api.file.FileCopyDetails;
 import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.logging.LogLevel;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
@@ -77,6 +76,12 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
 
     private final Property<String> runnerSuffixProperty = getProject().getObjects().property(String.class);
 
+    private final Property<PackageConfig.JarConfig.JarType> jarTypeProperty = getProject().getObjects()
+            .property(PackageConfig.JarConfig.JarType.class);
+
+    private final MapProperty<String, String> forcedProperties = getProject().getObjects()
+            .mapProperty(String.class, String.class);
+
     @Internal
     public Property<String> getRunnerSuffix() {
         return runnerSuffixProperty;
@@ -93,12 +98,22 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
     }
 
     @Input
+    public Property<PackageConfig.JarConfig.JarType> getJarType() {
+        return jarTypeProperty;
+    }
+
+    @Input
+    public Map<String, String> getForcedProperties() {
+        return getExtensionView().getForcedProperties().get();
+    }
+
+    @Input
     public Map<String, String> getCachingRelevantInput() {
         return getExtensionView().getCachingRelevantInput().get();
     }
 
     PackageConfig.JarConfig.JarType jarType() {
-        return getExtensionView().getJarType().get();
+        return getJarType().get();
     }
 
     boolean jarEnabled() {

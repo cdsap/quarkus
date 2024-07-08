@@ -53,11 +53,6 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     }
 
     @Internal
-    public Map<String, String> getForcedProperties() {
-        return getExtensionView().getForcedProperties().get();
-    }
-
-    @Internal
     public List<String> getIgnoredEntries() {
         return getExtensionView().getIgnoredEntries().get();
     }

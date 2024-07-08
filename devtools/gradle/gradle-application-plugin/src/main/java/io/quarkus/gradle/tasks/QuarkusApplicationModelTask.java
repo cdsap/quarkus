@@ -367,13 +367,13 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
             Set<ArtifactKey> alreadyVisited) {
         List<QuarkusResolvedArtifact> artifacts = findArtifacts(resolvedDependency, resolvedArtifacts);
         if (artifacts.isEmpty()) {
-            // BOMs files are not visible here, return null
             return;
         }
 
         for (QuarkusResolvedArtifact artifact : artifacts) {
             ModuleVersionIdentifier moduleVersionIdentifier = Preconditions
                     .checkNotNull(resolvedDependency.getSelected().getModuleVersion());
+
             String classifier = resolveClassifier(moduleVersionIdentifier, artifact.file);
             ArtifactKey artifactKey = new GACT(moduleVersionIdentifier.getGroup(), moduleVersionIdentifier.getName(),
                     classifier,
@@ -382,18 +382,15 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
                 return;
             }
 
-            if (resolvedDependency.getSelected().getId() instanceof ProjectComponentIdentifier) {
-
-            } else {
-                ResolvedDependencyBuilder dep = modelBuilder.getDependency(artifactKey);
-                if (dep == null) {
-                    ArtifactCoords artifactCoords = new GACTV(artifactKey, moduleVersionIdentifier.getVersion());
-                    dep = toDependency(artifactCoords, artifact.file);
-                    modelBuilder.addDependency(dep);
-                }
-                dep.setDeploymentCp();
-                dep.clearFlag(DependencyFlags.RELOADABLE);
+            ResolvedDependencyBuilder dep = modelBuilder.getDependency(artifactKey);
+            if (dep == null) {
+                ArtifactCoords artifactCoords = new GACTV(artifactKey, moduleVersionIdentifier.getVersion());
+                dep = toDependency(artifactCoords, artifact.file);
+                modelBuilder.addDependency(dep);
             }
+            dep.setDeploymentCp();
+            dep.clearFlag(DependencyFlags.RELOADABLE);
+
         }
         resolvedDependency.getSelected().getDependencies().forEach(d -> {
             if (d instanceof ResolvedDependencyResult) {
