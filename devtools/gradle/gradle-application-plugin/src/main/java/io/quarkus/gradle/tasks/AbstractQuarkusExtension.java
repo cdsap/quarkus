@@ -39,7 +39,7 @@ public abstract class AbstractQuarkusExtension {
     private static final String MANIFEST_SECTIONS_PROPERTY_PREFIX = "quarkus.package.jar.manifest.sections";
     private static final String MANIFEST_ATTRIBUTES_PROPERTY_PREFIX = "quarkus.package.jar.manifest.attributes";
 
-    private static final String QUARKUS_PROFILE = "quarkus.profile";
+    public static final String QUARKUS_PROFILE = "quarkus.profile";
     protected final Project project;
     protected final File projectDir;
     protected final Property<String> finalName;
@@ -96,12 +96,12 @@ public abstract class AbstractQuarkusExtension {
         return new BaseConfig(effectiveConfig);
     }
 
-    protected BaseConfig baseConfig() {
+    public BaseConfig baseConfig() {
         this.baseConfig.finalizeValue();
         return this.baseConfig.get();
     }
 
-    protected MapProperty<String, String> forcedPropertiesProperty() {
+    public MapProperty<String, String> forcedPropertiesProperty() {
         return forcedPropertiesProperty;
     }
 
@@ -249,14 +249,14 @@ public abstract class AbstractQuarkusExtension {
         }
     }
 
-    private String toManifestAttributeKey(String key) {
+    public static String toManifestAttributeKey(String key) {
         if (key.contains("\"")) {
             throw new GradleException("Manifest entry name " + key + " is invalid. \" characters are not allowed.");
         }
         return String.format("%s.\"%s\"", MANIFEST_ATTRIBUTES_PROPERTY_PREFIX, key);
     }
 
-    private String toManifestSectionAttributeKey(String section, String key) {
+    public static String toManifestSectionAttributeKey(String section, String key) {
         if (section.contains("\"")) {
             throw new GradleException("Manifest section name " + section + " is invalid. \" characters are not allowed.");
         }
