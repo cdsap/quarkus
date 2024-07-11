@@ -18,14 +18,7 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.provider.ListProperty;
-import org.gradle.api.tasks.CacheableTask;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.OutputDirectories;
-import org.gradle.api.tasks.OutputFiles;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.*;
 import org.gradle.api.tasks.options.Option;
 
 import io.quarkus.deployment.pkg.PackageConfig;
@@ -60,6 +53,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         return this;
     }
 
+    @Input
     public Map<String, String> getForcedProperties() {
         if (nativeArgumentsAdded) {
             return mutableForcedProperties;
