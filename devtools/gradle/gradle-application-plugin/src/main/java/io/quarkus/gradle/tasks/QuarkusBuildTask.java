@@ -102,10 +102,6 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
         return jarTypeProperty;
     }
 
-    public Map<String, String> getForcedProperties() {
-        return getExtensionView().getForcedProperties().get();
-    }
-
     public Map<String, String> getCachingRelevantInput() {
         return getExtensionView().getCachingRelevantInput().get();
     }

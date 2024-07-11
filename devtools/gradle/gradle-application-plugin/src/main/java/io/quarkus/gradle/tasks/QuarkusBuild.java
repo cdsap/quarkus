@@ -38,6 +38,10 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     private static final String NATIVE_PROPERTY_NAMESPACE = "quarkus.native";
     public static final String QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD = "quarkus.ignore.legacy.deploy.build";
 
+    private boolean nativeArgumentsAdded = false;
+
+    private final Map<String, String> mutableForcedProperties = new HashMap<>();
+
     @Inject
     public QuarkusBuild() {
         super("Builds a Quarkus application.", true);
@@ -51,8 +55,17 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         for (Map.Entry<String, ?> nativeArg : nativeArgsMap.entrySet()) {
             mutableForcedProperties.put(expandConfigurationKey(nativeArg.getKey()), nativeArg.getValue().toString());
         }
+        nativeArgumentsAdded = true;
         setForcedProperties(mutableForcedProperties);
         return this;
+    }
+
+    public Map<String, String> getForcedProperties() {
+        if (nativeArgumentsAdded) {
+            return mutableForcedProperties;
+        } else {
+            return getExtensionView().getForcedProperties().get();
+        }
     }
 
     @Internal
@@ -61,7 +74,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     }
 
     private void setForcedProperties(Map<String, String> properties) {
-        getExtensionView().setForcedProperties(properties);
+        mutableForcedProperties.putAll(properties);
     }
 
     @Option(description = "When using the uber-jar option, this option can be used to "
