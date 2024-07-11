@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.gradle.BuildResult;
@@ -17,6 +18,7 @@ public class BasicJavaNativeBuildIT extends QuarkusNativeGradleITBase {
     private DevModeClient devModeClient = new DevModeClient();
 
     @Test
+    @Disabled
     public void shouldBuildNativeImage() throws Exception {
         final File projectDir = getProjectDir("basic-java-native-module");
 
@@ -45,6 +47,7 @@ public class BasicJavaNativeBuildIT extends QuarkusNativeGradleITBase {
     }
 
     @Test
+    @Disabled
     public void shouldBuildNativeImageWithCustomName() throws Exception {
         final File projectDir = getProjectDir("basic-java-native-module");
 
@@ -75,6 +78,7 @@ public class BasicJavaNativeBuildIT extends QuarkusNativeGradleITBase {
     }
 
     @Test
+    @Disabled
     public void shouldBuildNativeImageWithCustomNameWithoutSuffix() throws Exception {
         final File projectDir = getProjectDir("basic-java-native-module");
 

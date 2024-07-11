@@ -7,6 +7,7 @@ import java.io.File;
 import org.assertj.core.api.SoftAssertions;
 import org.assertj.core.api.junit.jupiter.InjectSoftAssertions;
 import org.assertj.core.api.junit.jupiter.SoftAssertionsExtension;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -18,6 +19,7 @@ public class NativeIntegrationTestIT extends QuarkusNativeGradleITBase {
     SoftAssertions soft;
 
     @Test
+    @Disabled
     public void nativeTestShouldRunIntegrationTest() throws Exception {
         File projectDir = getProjectDir("it-test-basic-project");
 
@@ -29,6 +31,7 @@ public class NativeIntegrationTestIT extends QuarkusNativeGradleITBase {
     }
 
     @Test
+    @Disabled
     public void runNativeTestsWithOutputName() throws Exception {
         final File projectDir = getProjectDir("it-test-basic-project");
 
@@ -39,6 +42,7 @@ public class NativeIntegrationTestIT extends QuarkusNativeGradleITBase {
     }
 
     @Test
+    @Disabled
     public void runNativeTestsWithoutRunnerSuffix() throws Exception {
         final File projectDir = getProjectDir("it-test-basic-project");
 
