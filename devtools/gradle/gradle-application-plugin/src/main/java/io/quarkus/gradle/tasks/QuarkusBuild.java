@@ -18,7 +18,6 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.provider.ListProperty;
-import org.gradle.api.provider.MapProperty;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
@@ -41,7 +40,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
     @Inject
     public QuarkusBuild() {
-        super("Builds a Quarkus application.");
+        super("Builds a Quarkus application.", true);
     }
 
     @SuppressWarnings("unused")
@@ -55,13 +54,8 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     }
 
     @Internal
-    public MapProperty<String, String> getForcedProperties() {
-        return extension().forcedPropertiesProperty();
-    }
-
-    @Internal
     public ListProperty<String> getIgnoredEntries() {
-        return extension().ignoredEntriesProperty();
+        return getExtensionView().getIgnoredEntries();
     }
 
     @Option(description = "When using the uber-jar option, this option can be used to "
@@ -209,7 +203,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     @SuppressWarnings("deprecation") // legacy JAR
     @TaskAction
     public void finalizeQuarkusBuild() {
-        if (extension().forcedPropertiesProperty().get().containsKey(QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD)) {
+        if (getExtensionView().getForcedProperties().get().containsKey(QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD)) {
             getLogger().info("SKIPPING finalizedBy deploy build");
             return;
         }
