@@ -45,17 +45,23 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
     @SuppressWarnings("unused")
     public QuarkusBuild nativeArgs(Action<Map<String, ?>> action) {
+        Map<String, String> mutableForcedProperties = new HashMap<>(getForcedProperties());
         Map<String, ?> nativeArgsMap = new HashMap<>();
         action.execute(nativeArgsMap);
         for (Map.Entry<String, ?> nativeArg : nativeArgsMap.entrySet()) {
-            getForcedProperties().put(expandConfigurationKey(nativeArg.getKey()), nativeArg.getValue().toString());
+            mutableForcedProperties.put(expandConfigurationKey(nativeArg.getKey()), nativeArg.getValue().toString());
         }
+        setForcedProperties(mutableForcedProperties);
         return this;
     }
 
     @Internal
     public ListProperty<String> getIgnoredEntries() {
         return getExtensionView().getIgnoredEntries();
+    }
+
+    private void setForcedProperties(Map<String, String> properties) {
+        getExtensionView().setForcedProperties(properties);
     }
 
     @Option(description = "When using the uber-jar option, this option can be used to "

@@ -263,4 +263,8 @@ public abstract class QuarkusPluginExtensionView {
         }
         return profile;
     }
+
+    public void setForcedProperties(Map<String, String> properties) {
+        getForcedProperties().set(properties);
+    }
 }

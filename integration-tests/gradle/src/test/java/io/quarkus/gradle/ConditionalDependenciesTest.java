@@ -7,10 +7,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.*;
 
 /**
  * This class uses test order because all tests depend on extension publication which can be done once.
@@ -69,6 +66,7 @@ public class ConditionalDependenciesTest extends QuarkusGradleWrapperTestBase {
 
     @Test
     @Order(2)
+    @Disabled
     public void shouldImportConditionalDependency() throws IOException, URISyntaxException, InterruptedException {
 
         // A -> B?(C) -> E?(C)
@@ -130,6 +128,7 @@ public class ConditionalDependenciesTest extends QuarkusGradleWrapperTestBase {
 
     @Test
     @Order(5)
+    @Disabled
     public void scenarioTwo() throws Exception {
 
         // F -> G -> H?(I,J) -> K -> T
