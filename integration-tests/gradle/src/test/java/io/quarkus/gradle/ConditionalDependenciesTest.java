@@ -66,7 +66,6 @@ public class ConditionalDependenciesTest extends QuarkusGradleWrapperTestBase {
 
     @Test
     @Order(2)
-    @Disabled
     public void shouldImportConditionalDependency() throws IOException, URISyntaxException, InterruptedException {
 
         // A -> B?(C) -> E?(C)
@@ -128,7 +127,6 @@ public class ConditionalDependenciesTest extends QuarkusGradleWrapperTestBase {
 
     @Test
     @Order(5)
-    @Disabled
     public void scenarioTwo() throws Exception {
 
         // F -> G -> H?(I,J) -> K -> T
