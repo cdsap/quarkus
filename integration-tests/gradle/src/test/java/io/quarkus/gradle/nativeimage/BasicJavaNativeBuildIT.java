@@ -18,7 +18,6 @@ public class BasicJavaNativeBuildIT extends QuarkusNativeGradleITBase {
     private DevModeClient devModeClient = new DevModeClient();
 
     @Test
-    @Disabled
     public void shouldBuildNativeImage() throws Exception {
         final File projectDir = getProjectDir("basic-java-native-module");
 
