@@ -239,6 +239,7 @@ public class QuarkusPlugin implements Plugin<Project> {
                 QuarkusBuildDependencies.class,
                 task -> {
                     configureQuarkusBuildTask(project, quarkusExt, task, quarkusBuildAppModelTask);
+                    task.dependsOn(quarkusBuildAppModelTask);
 
                     task.getOutputs().doNotCacheIf("Dependencies are never cached", t -> true);
                     task.getApplicationModel()
