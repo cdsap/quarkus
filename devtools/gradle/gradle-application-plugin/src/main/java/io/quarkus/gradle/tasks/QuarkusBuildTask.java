@@ -250,7 +250,7 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
             // Delete directories inside Gradle's build/ dir that are going to be populated by the Quarkus build.
             if (nativeEnabled()) {
                 if (jarEnabled()) {
-                    throw QuarkusBuild.nativeAndJar();
+                    //throw QuarkusBuild.nativeAndJar();
                 }
                 delete.delete(fastJar());
             } else if (jarEnabled()) {
@@ -297,7 +297,7 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
         WorkQueue workQueue = workQueue(quarkusProperties, getExtensionView().getCodeGenForkOptions().get());
 
         workQueue.submit(BuildWorker.class, params -> {
-            params.getBuildSystemProperties().putAll(getExtensionView().getQuarkusBuildProperties());
+            params.getBuildSystemProperties().putAll(quarkusProperties);
             params.getBaseName().set(getExtensionView().getFinalName());
             params.getTargetDirectory().set(buildDir.toFile());
             params.getAppModel().set(appModel);
@@ -313,7 +313,7 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
             copy.eachFile(new CopyActionDeleteNonWriteableTarget(genDir));
             if (nativeEnabled()) {
                 if (jarEnabled()) {
-                    throw QuarkusBuild.nativeAndJar();
+                    //throw QuarkusBuild.nativeAndJar();
                 }
                 if (nativeSourcesOnly()) {
                     copy.include(QUARKUS_ARTIFACT_PROPERTIES);

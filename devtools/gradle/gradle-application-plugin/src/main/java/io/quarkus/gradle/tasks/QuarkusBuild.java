@@ -114,7 +114,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         Map<String, File> outputs = new HashMap<>();
         if (nativeEnabled()) {
             if (jarEnabled()) {
-                throw nativeAndJar();
+                //throw nativeAndJar();
             }
             if (nativeSourcesOnly()) {
                 outputs.put("fast-jar", fastJar());
@@ -146,7 +146,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         Map<String, File> outputs = new HashMap<>();
         if (nativeEnabled()) {
             if (jarEnabled()) {
-                throw nativeAndJar();
+                //throw nativeAndJar();
             }
             if (nativeSourcesOnly()) {
                 outputs.put("artifact-properties", artifactProperties());
@@ -174,7 +174,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         List<File> inputs = new ArrayList<>();
         if (nativeEnabled()) {
             if (jarEnabled()) {
-                throw nativeAndJar();
+                //throw nativeAndJar();
             }
             if (nativeSourcesOnly()) {
                 // nothing
@@ -227,7 +227,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
         if (nativeEnabled()) {
             if (jarEnabled()) {
-                throw nativeAndJar();
+                //throw nativeAndJar();
             }
             if (nativeSourcesOnly()) {
                 generateBuild();

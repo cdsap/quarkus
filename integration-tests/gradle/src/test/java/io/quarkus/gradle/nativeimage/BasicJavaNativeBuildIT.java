@@ -21,7 +21,7 @@ public class BasicJavaNativeBuildIT extends QuarkusNativeGradleITBase {
     public void shouldBuildNativeImage() throws Exception {
         final File projectDir = getProjectDir("basic-java-native-module");
 
-        final BuildResult build = runGradleWrapper(projectDir, "clean", "buildNative");
+        final BuildResult build = runGradleWrapper(projectDir, "clean", "buildNative", "-Dquarkus.native.enabled=true");
 
         assertThat(build.getTasks().get(":quarkusBuild")).isEqualTo(BuildResult.SUCCESS_OUTCOME);
         final String buildOutput = build.getOutput();
