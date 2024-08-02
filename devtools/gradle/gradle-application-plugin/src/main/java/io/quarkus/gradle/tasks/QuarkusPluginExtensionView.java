@@ -38,6 +38,8 @@ public abstract class QuarkusPluginExtensionView {
             if (taskGraph.hasTask(project.getPath() + BUILD_NATIVE_TASK_NAME)
                     || taskGraph.hasTask(project.getPath() + TEST_NATIVE_TASK_NAME)) {
                 getNativeBuild().set(true);
+            } else {
+                getNativeBuild().set(false);
             }
         });
         getCacheLargeArtifacts().set(extension.getCacheLargeArtifacts());
