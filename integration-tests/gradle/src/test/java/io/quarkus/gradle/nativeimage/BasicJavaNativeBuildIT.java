@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.gradle.BuildResult;
@@ -46,12 +45,11 @@ public class BasicJavaNativeBuildIT extends QuarkusNativeGradleITBase {
     }
 
     @Test
-    @Disabled
     public void shouldBuildNativeImageWithCustomName() throws Exception {
         final File projectDir = getProjectDir("basic-java-native-module");
 
         final BuildResult build = runGradleWrapper(projectDir, "clean", "buildNative",
-                "-Dquarkus.package.output-name=test");
+                "-Dquarkus.package.output-name=test", "-Dquarkus.native.enabled=true");
 
         assertThat(build.getTasks().get(":quarkusBuild")).isEqualTo(BuildResult.SUCCESS_OUTCOME);
         final String buildOutput = build.getOutput();
@@ -77,12 +75,12 @@ public class BasicJavaNativeBuildIT extends QuarkusNativeGradleITBase {
     }
 
     @Test
-    @Disabled
     public void shouldBuildNativeImageWithCustomNameWithoutSuffix() throws Exception {
         final File projectDir = getProjectDir("basic-java-native-module");
 
         final BuildResult build = runGradleWrapper(projectDir, "clean", "buildNative",
-                "-Dquarkus.package.output-name=test", "-Dquarkus.package.jar.add-runner-suffix=false");
+                "-Dquarkus.package.output-name=test", "-Dquarkus.package.jar.add-runner-suffix=false",
+                "-Dquarkus.native.enabled=true");
 
         assertThat(build.getTasks().get(":quarkusBuild")).isEqualTo(BuildResult.SUCCESS_OUTCOME);
         final String buildOutput = build.getOutput();

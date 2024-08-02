@@ -7,7 +7,6 @@ import java.io.File;
 import org.assertj.core.api.SoftAssertions;
 import org.assertj.core.api.junit.jupiter.InjectSoftAssertions;
 import org.assertj.core.api.junit.jupiter.SoftAssertionsExtension;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -19,11 +18,10 @@ public class NativeIntegrationTestIT extends QuarkusNativeGradleITBase {
     SoftAssertions soft;
 
     @Test
-    @Disabled
     public void nativeTestShouldRunIntegrationTest() throws Exception {
         File projectDir = getProjectDir("it-test-basic-project");
 
-        BuildResult testResult = runGradleWrapper(projectDir, "clean", "testNative");
+        BuildResult testResult = runGradleWrapper(projectDir, "clean", "testNative", "-Dquarkus.native.enabled=true");
 
         soft.assertThat(testResult.getTasks().get(":testNative")).isIn(BuildResult.SUCCESS_OUTCOME, BuildResult.FROM_CACHE);
         soft.assertThat(projectDir.toPath().resolve("build/code-with-quarkus-1.0.0-SNAPSHOT-runner")).isRegularFile()
@@ -31,23 +29,21 @@ public class NativeIntegrationTestIT extends QuarkusNativeGradleITBase {
     }
 
     @Test
-    @Disabled
     public void runNativeTestsWithOutputName() throws Exception {
         final File projectDir = getProjectDir("it-test-basic-project");
 
         final BuildResult testResult = runGradleWrapper(projectDir, "clean", "testNative",
-                "-Dquarkus.package.output-name=test");
+                "-Dquarkus.package.output-name=test", "-Dquarkus.native.enabled=true");
         soft.assertThat(testResult.getTasks().get(":testNative")).isIn(BuildResult.SUCCESS_OUTCOME, BuildResult.FROM_CACHE);
         soft.assertThat(projectDir.toPath().resolve("build/test-runner")).isRegularFile().isExecutable();
     }
 
     @Test
-    @Disabled
     public void runNativeTestsWithoutRunnerSuffix() throws Exception {
         final File projectDir = getProjectDir("it-test-basic-project");
 
         final BuildResult testResult = runGradleWrapper(projectDir, "clean", "testNative",
-                "-Dquarkus.package.jar.add-runner-suffix=false");
+                "-Dquarkus.package.jar.add-runner-suffix=false", "-Dquarkus.native.enabled=true");
         soft.assertThat(testResult.getTasks().get(":testNative")).isIn(BuildResult.SUCCESS_OUTCOME, BuildResult.FROM_CACHE);
         soft.assertThat(projectDir.toPath().resolve("build/code-with-quarkus-1.0.0-SNAPSHOT")).isRegularFile()
                 .isExecutable();
