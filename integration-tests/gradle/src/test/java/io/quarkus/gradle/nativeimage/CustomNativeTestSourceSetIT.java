@@ -14,7 +14,7 @@ public class CustomNativeTestSourceSetIT extends QuarkusNativeGradleITBase {
     public void runNativeTests() throws Exception {
         final File projectDir = getProjectDir("custom-java-native-sourceset-module");
 
-        final BuildResult build = runGradleWrapper(projectDir, "clean", "testNative", "-Dquarkus.native.enabled=true");
+        final BuildResult build = runGradleWrapper(projectDir, "clean", "testNative");
         assertThat(build.getTasks().get(":testNative")).isEqualTo(BuildResult.SUCCESS_OUTCOME);
     }
 

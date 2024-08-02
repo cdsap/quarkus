@@ -42,18 +42,17 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
     @SuppressWarnings("unused")
     public QuarkusBuild nativeArgs(Action<Map<String, ?>> action) {
-        Map<String, String> mutableForcedProperties = new HashMap<>(getForcedProperties());
+        Map<String, Object> mutableForcedProperties = new HashMap<>(getForcedProperties());
         Map<String, ?> nativeArgsMap = new HashMap<>();
         action.execute(nativeArgsMap);
         for (Map.Entry<String, ?> nativeArg : nativeArgsMap.entrySet()) {
-            mutableForcedProperties.put(expandConfigurationKey(nativeArg.getKey()), nativeArg.getValue().toString());
+            mutableForcedProperties.put(expandConfigurationKey(nativeArg.getKey()), nativeArg.getValue());
         }
-        nativeArgumentsAdded = true;
-        setForcedProperties(mutableForcedProperties);
+        action.execute(mutableForcedProperties);
         return this;
     }
 
-    @Input
+    @Internal
     public Map<String, String> getForcedProperties() {
         if (nativeArgumentsAdded) {
             return mutableForcedProperties;
@@ -65,10 +64,6 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     @Internal
     public ListProperty<String> getIgnoredEntries() {
         return getExtensionView().getIgnoredEntries();
-    }
-
-    private void setForcedProperties(Map<String, String> properties) {
-        mutableForcedProperties.putAll(properties);
     }
 
     @Option(description = "When using the uber-jar option, this option can be used to "
@@ -114,7 +109,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         Map<String, File> outputs = new HashMap<>();
         if (nativeEnabled()) {
             if (jarEnabled()) {
-                //throw nativeAndJar();
+                throw nativeAndJar();
             }
             if (nativeSourcesOnly()) {
                 outputs.put("fast-jar", fastJar());
@@ -146,7 +141,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         Map<String, File> outputs = new HashMap<>();
         if (nativeEnabled()) {
             if (jarEnabled()) {
-                //throw nativeAndJar();
+                throw nativeAndJar();
             }
             if (nativeSourcesOnly()) {
                 outputs.put("artifact-properties", artifactProperties());
@@ -174,7 +169,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         List<File> inputs = new ArrayList<>();
         if (nativeEnabled()) {
             if (jarEnabled()) {
-                //throw nativeAndJar();
+                throw nativeAndJar();
             }
             if (nativeSourcesOnly()) {
                 // nothing
@@ -227,7 +222,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
         if (nativeEnabled()) {
             if (jarEnabled()) {
-                //throw nativeAndJar();
+                throw nativeAndJar();
             }
             if (nativeSourcesOnly()) {
                 generateBuild();

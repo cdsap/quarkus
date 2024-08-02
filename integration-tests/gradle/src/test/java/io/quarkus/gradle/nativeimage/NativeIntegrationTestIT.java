@@ -21,7 +21,7 @@ public class NativeIntegrationTestIT extends QuarkusNativeGradleITBase {
     public void nativeTestShouldRunIntegrationTest() throws Exception {
         File projectDir = getProjectDir("it-test-basic-project");
 
-        BuildResult testResult = runGradleWrapper(projectDir, "clean", "testNative", "-Dquarkus.native.enabled=true");
+        BuildResult testResult = runGradleWrapper(projectDir, "clean", "testNative");
 
         soft.assertThat(testResult.getTasks().get(":testNative")).isIn(BuildResult.SUCCESS_OUTCOME, BuildResult.FROM_CACHE);
         soft.assertThat(projectDir.toPath().resolve("build/code-with-quarkus-1.0.0-SNAPSHOT-runner")).isRegularFile()

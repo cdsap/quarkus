@@ -1,5 +1,7 @@
 package io.quarkus.gradle.tasks;
 
+import static io.quarkus.gradle.QuarkusPlugin.BUILD_NATIVE_TASK_NAME;
+import static io.quarkus.gradle.QuarkusPlugin.TEST_NATIVE_TASK_NAME;
 import static io.quarkus.gradle.tasks.AbstractQuarkusExtension.*;
 import static io.smallrye.common.expression.Expression.Flag.*;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
@@ -32,6 +34,12 @@ public abstract class QuarkusPluginExtensionView {
 
     @Inject
     public QuarkusPluginExtensionView(Project project, QuarkusPluginExtension extension) {
+        project.getGradle().getTaskGraph().whenReady(taskGraph -> {
+            if (taskGraph.hasTask(project.getPath() + BUILD_NATIVE_TASK_NAME)
+                    || taskGraph.hasTask(project.getPath() + TEST_NATIVE_TASK_NAME)) {
+                getNativeBuild().set(true);
+            }
+        });
         getCacheLargeArtifacts().set(extension.getCacheLargeArtifacts());
         getCleanupBuildOutput().set(extension.getCleanupBuildOutput());
         getFinalName().set(extension.getFinalName());
@@ -75,6 +83,10 @@ public abstract class QuarkusPluginExtensionView {
 
     @Inject
     public abstract ProviderFactory getProviderFactory();
+
+    @Input
+    @Optional
+    public abstract Property<Boolean> getNativeBuild();
 
     @Input
     public abstract Property<Boolean> getCacheLargeArtifacts();
@@ -174,13 +186,16 @@ public abstract class QuarkusPluginExtensionView {
         defaultProperties.putIfAbsent("quarkus.application.name", appArtifact.getArtifactId());
         defaultProperties.putIfAbsent("quarkus.application.version", appArtifact.getVersion());
 
-        Map<String, String> mutatedForcedProperties = new HashMap<>(getForcedProperties().get());
+        Map<String, String> forced = new HashMap<>(getForcedProperties().get());
         getProjectProperties().get().forEach((k, v) -> {
-            mutatedForcedProperties.put(k, v.toString());
+            forced.put(k, v.toString());
 
         });
+        if (getNativeBuild().get()) {
+            forced.put("quarkus.native.enabled", "true");
+        }
         return EffectiveConfig.builder()
-                .withForcedProperties(mutatedForcedProperties)
+                .withForcedProperties(forced)
                 .withTaskProperties(properties)
                 .withBuildProperties(getQuarkusBuildProperties().get())
                 .withProjectProperties(getQuarkusRelevantProjectProperties().get())

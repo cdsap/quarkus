@@ -76,7 +76,7 @@ public class QuarkusPluginTest {
 
         Task quarkusDepBuild = tasks.getByName(QuarkusPlugin.QUARKUS_BUILD_DEP_TASK_NAME);
         assertThat(getDependantProvidedTaskName(quarkusDepBuild))
-                .contains("quarkusBuildAppModel");
+                .isEmpty();
 
         Task quarkusBuild = tasks.getByName(QUARKUS_BUILD_TASK_NAME);
         assertThat(getDependantProvidedTaskName(quarkusBuild))
