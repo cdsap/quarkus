@@ -46,7 +46,6 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
     private static final String QUARKUS_BUILD_DEP_DIR = QUARKUS_BUILD_DIR + "/dep";
     static final String QUARKUS_ARTIFACT_PROPERTIES = "quarkus-artifact.properties";
     static final String NATIVE_SOURCES = "native-sources";
-
     private final GACTV gactv;
 
     QuarkusBuildTask(String description, boolean compatible) {
@@ -297,7 +296,8 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
         WorkQueue workQueue = workQueue(quarkusProperties, getExtensionView().getCodeGenForkOptions().get());
 
         workQueue.submit(BuildWorker.class, params -> {
-            params.getBuildSystemProperties().putAll(getExtensionView().getQuarkusBuildProperties());
+            params.getBuildSystemProperties()
+                    .putAll(getExtensionView().buildSystemProperties(appModel.getAppArtifact(), quarkusProperties));
             params.getBaseName().set(getExtensionView().getFinalName());
             params.getTargetDirectory().set(buildDir.toFile());
             params.getAppModel().set(appModel);
