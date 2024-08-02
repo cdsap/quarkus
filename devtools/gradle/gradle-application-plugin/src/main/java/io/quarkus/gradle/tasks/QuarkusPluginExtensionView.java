@@ -1,5 +1,7 @@
 package io.quarkus.gradle.tasks;
 
+import static io.quarkus.gradle.QuarkusPlugin.BUILD_NATIVE_TASK_NAME;
+import static io.quarkus.gradle.QuarkusPlugin.TEST_NATIVE_TASK_NAME;
 import static io.quarkus.gradle.tasks.AbstractQuarkusExtension.*;
 import static io.smallrye.common.expression.Expression.Flag.*;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
@@ -32,6 +34,14 @@ public abstract class QuarkusPluginExtensionView {
 
     @Inject
     public QuarkusPluginExtensionView(Project project, QuarkusPluginExtension extension) {
+        project.getGradle().getTaskGraph().whenReady(taskGraph -> {
+            if (taskGraph.hasTask(project.getPath() + BUILD_NATIVE_TASK_NAME)
+                    || taskGraph.hasTask(project.getPath() + TEST_NATIVE_TASK_NAME)) {
+                getNativeBuild().set(true);
+            } else {
+                getNativeBuild().set(false);
+            }
+        });
         getCacheLargeArtifacts().set(extension.getCacheLargeArtifacts());
         getCleanupBuildOutput().set(extension.getCleanupBuildOutput());
         getFinalName().set(extension.getFinalName());
@@ -51,7 +61,6 @@ public abstract class QuarkusPluginExtensionView {
             if ((entry.getKey().startsWith("quarkus.") || entry.getKey().startsWith("platform.quarkus."))) {
                 projectProperties.put(entry.getKey(), entry.getValue());
             }
-
         }
         getProjectProperties().set(projectProperties);
         getJarEnabled().set(extension.baseConfig().packageConfig().jar().enabled());
@@ -76,6 +85,10 @@ public abstract class QuarkusPluginExtensionView {
 
     @Inject
     public abstract ProviderFactory getProviderFactory();
+
+    @Input
+    @Optional
+    public abstract Property<Boolean> getNativeBuild();
 
     @Input
     public abstract Property<Boolean> getCacheLargeArtifacts();
@@ -164,33 +177,47 @@ public abstract class QuarkusPluginExtensionView {
 
     protected EffectiveConfig buildEffectiveConfiguration(ResolvedDependency appArtifact) {
         Map<String, Object> properties = new HashMap<>();
-
         exportCustomManifestProperties(properties);
-        buildSystemProperties(appArtifact, getQuarkusBuildProperties().get(), getForcedProperties());
 
+        Map<String, String> defaultProperties = new HashMap<>();
         String userIgnoredEntries = String.join(",", getIgnoredEntries().get());
         if (!userIgnoredEntries.isEmpty()) {
-            properties.put("quarkus.package.user-configured-ignored-entries", userIgnoredEntries);
+            defaultProperties.put("quarkus.package.jar.user-configured-ignored-entries", userIgnoredEntries);
         }
+        Set<File> resourcesDirs = getMainResources().getFiles();
+        defaultProperties.putIfAbsent("quarkus.application.name", appArtifact.getArtifactId());
+        defaultProperties.putIfAbsent("quarkus.application.version", appArtifact.getVersion());
 
-        properties.putIfAbsent("quarkus.application.name", appArtifact.getArtifactId());
-        properties.putIfAbsent("quarkus.application.version", appArtifact.getVersion());
+        Map<String, String> forced = new HashMap<>(getForcedProperties().get());
+        getProjectProperties().get().forEach((k, v) -> {
+            forced.put(k, v.toString());
 
-        return buildEffectiveConfiguration(properties);
+        });
+        if (getNativeBuild().get()) {
+            forced.put("quarkus.native.enabled", "true");
+        }
+        return EffectiveConfig.builder()
+                .withForcedProperties(forced)
+                .withTaskProperties(properties)
+                .withBuildProperties(getQuarkusBuildProperties().get())
+                .withProjectProperties(getQuarkusRelevantProjectProperties().get())
+                .withDefaultProperties(defaultProperties)
+                .withSourceDirectories(resourcesDirs)
+                .withProfile(getQuarkusProfile())
+                .build();
     }
 
-    protected Map<String, String> buildSystemProperties(ResolvedDependency appArtifact, Map<String, String> quarkusProperties,
-            MapProperty<String, String> forcedProperties) {
+    protected Map<String, String> buildSystemProperties(ResolvedDependency appArtifact, Map<String, String> quarkusProperties) {
         Map<String, String> buildSystemProperties = new HashMap<>();
         buildSystemProperties.putIfAbsent("quarkus.application.name", appArtifact.getArtifactId());
         buildSystemProperties.putIfAbsent("quarkus.application.version", appArtifact.getVersion());
 
-        for (Map.Entry<String, String> entry : forcedProperties.get().entrySet()) {
+        for (Map.Entry<String, String> entry : getForcedProperties().get().entrySet()) {
             if (entry.getKey().startsWith("quarkus.") || entry.getKey().startsWith("platform.quarkus.")) {
                 buildSystemProperties.put(entry.getKey(), entry.getValue());
             }
         }
-        for (Map.Entry<String, String> entry : quarkusProperties.entrySet()) {
+        for (Map.Entry<String, String> entry : getQuarkusBuildProperties().get().entrySet()) {
             if (entry.getKey().startsWith("quarkus.") || entry.getKey().startsWith("platform.quarkus.")) {
                 buildSystemProperties.put(entry.getKey(), entry.getValue());
             }
@@ -209,13 +236,13 @@ public abstract class QuarkusPluginExtensionView {
         for (String value : quarkusValues) {
             Expression expression = Expression.compile(value, LENIENT_SYNTAX, NO_TRIM, NO_SMART_BRACES, DOUBLE_COLON);
             for (String reference : expression.getReferencedStrings()) {
-                String expanded = forcedProperties.get().get(reference);
+                String expanded = getForcedProperties().get().get(reference);
                 if (expanded != null) {
                     buildSystemProperties.put(reference, expanded);
                     continue;
                 }
 
-                expanded = quarkusProperties.get(reference);
+                expanded = getQuarkusBuildProperties().get().get(reference);
                 if (expanded != null) {
                     buildSystemProperties.put(reference, expanded);
                     continue;
@@ -226,22 +253,7 @@ public abstract class QuarkusPluginExtensionView {
                 }
             }
         }
-
         return buildSystemProperties;
-    }
-
-    private EffectiveConfig buildEffectiveConfiguration(Map<String, Object> properties) {
-        Set<File> resourcesDirs = getMainResources().getFiles();
-
-        return EffectiveConfig.builder()
-                .withForcedProperties(getQuarkusRelevantProjectProperties().get())
-                .withTaskProperties(properties)
-                .withBuildProperties(getQuarkusBuildProperties().get())
-                // TODO: Do we really need all project properties, or we can live with just quarkus properties?
-                .withProjectProperties(getQuarkusRelevantProjectProperties().get())
-                .withSourceDirectories(resourcesDirs)
-                .withProfile(getQuarkusProfile())
-                .build();
     }
 
     private String getQuarkusProfile() {
