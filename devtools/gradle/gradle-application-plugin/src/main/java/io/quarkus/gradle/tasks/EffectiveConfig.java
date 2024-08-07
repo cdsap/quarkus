@@ -58,25 +58,25 @@ public final class EffectiveConfig {
         // 0 -> fallback config source for error workaround (see below)
 
         this.config = ConfigUtils.emptyConfigBuilder()
-            .forClassLoader(toUrlClassloader(builder.sourceDirectories))
-            .withSources(new PropertiesConfigSource(builder.forcedProperties, "forcedProperties", 600))
-            .withSources(new PropertiesConfigSource(asStringMap(builder.taskProperties), "taskProperties", 500))
-            .addSystemSources()
-            .withSources(new PropertiesConfigSource(builder.buildProperties, "quarkusBuildProperties", 290))
-            .withSources(new PropertiesConfigSource(asStringMap(builder.projectProperties), "projectProperties", 280))
-            .withSources(new YamlConfigSourceLoader.InFileSystem())
-            .withSources(new YamlConfigSourceLoader.InClassPath())
-            .addPropertiesSources()
-            // todo: this is due to ApplicationModel#getPlatformProperties not being included in the effective config
-            .withSources(new PropertiesConfigSource(Map.of("platform.quarkus.native.builder-image", "<<ignored>>"),
-                "NativeConfig#builderImage", 0))
-            .withDefaultValues(builder.defaultProperties)
-            .withProfile(builder.profile)
-            .withMapping(PackageConfig.class)
-            .withMapping(NativeConfig.class)
-            .withInterceptors(ConfigCompatibility.FrontEnd.instance(), ConfigCompatibility.BackEnd.instance())
-            .setAddDiscoveredSecretKeysHandlers(false)
-            .build();
+                .forClassLoader(toUrlClassloader(builder.sourceDirectories))
+                .withSources(new PropertiesConfigSource(builder.forcedProperties, "forcedProperties", 600))
+                .withSources(new PropertiesConfigSource(asStringMap(builder.taskProperties), "taskProperties", 500))
+                .addSystemSources()
+                .withSources(new PropertiesConfigSource(builder.buildProperties, "quarkusBuildProperties", 290))
+                .withSources(new PropertiesConfigSource(asStringMap(builder.projectProperties), "projectProperties", 280))
+                .withSources(new YamlConfigSourceLoader.InFileSystem())
+                .withSources(new YamlConfigSourceLoader.InClassPath())
+                .addPropertiesSources()
+                // todo: this is due to ApplicationModel#getPlatformProperties not being included in the effective config
+                .withSources(new PropertiesConfigSource(Map.of("platform.quarkus.native.builder-image", "<<ignored>>"),
+                        "NativeConfig#builderImage", 0))
+                .withDefaultValues(builder.defaultProperties)
+                .withProfile(builder.profile)
+                .withMapping(PackageConfig.class)
+                .withMapping(NativeConfig.class)
+                .withInterceptors(ConfigCompatibility.FrontEnd.instance(), ConfigCompatibility.BackEnd.instance())
+                .setAddDiscoveredSecretKeysHandlers(false)
+                .build();
         this.values = generateFullConfigMap(config);
     }
 
