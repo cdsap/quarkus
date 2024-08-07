@@ -69,15 +69,17 @@ public final class EffectiveConfig {
 
         configSources.add(new PropertiesConfigSource(builder.forcedProperties, "forcedProperties", 600));
         configSources.add(new PropertiesConfigSource(asStringMap(builder.taskProperties), "taskProperties", 500));
-        configSources.add(new PropertiesConfigSource(ConfigSourceUtil.propertiesToMap(System.getProperties()),
+        Map<String, String> systemPropertiesWithoutConfCacheProblematicEntries = ConfigSourceUtil.propertiesToMap(System.getProperties());
+        systemPropertiesWithoutConfCacheProblematicEntries.remove("idea.io.use.nio2");
+        configSources.add(new PropertiesConfigSource(systemPropertiesWithoutConfCacheProblematicEntries,
                 "System.getProperties()", 400));
         //  Commented the EnvConfigSource because configuration cache is invalidated on every build because:
         //  "Calculating task graph as configuration cache cannot be reused because environment variable 'APP_ICON_65671' has changed."
-        configSources.add(new EnvConfigSource(300) {
-        });
+        //        configSources.add(new EnvConfigSource(300) {
+        //        });
+        //        })
         configSources.add(new PropertiesConfigSource(builder.buildProperties, "quarkusBuildProperties", 290));
         configSources.add(new PropertiesConfigSource(asStringMap(builder.projectProperties), "projectProperties", 280));
-
         ClassLoader classLoader = toUrlClassloader(builder.sourceDirectories);
         ApplicationPropertiesConfigSourceLoader.InClassPath applicationProperties = new ApplicationPropertiesConfigSourceLoader.InClassPath();
         configSources.addAll(applicationProperties.getConfigSources(classLoader));

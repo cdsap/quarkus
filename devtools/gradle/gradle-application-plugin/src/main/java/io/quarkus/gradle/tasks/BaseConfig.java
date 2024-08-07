@@ -19,7 +19,7 @@ import io.quarkus.gradle.dsl.Manifest;
  * Configuration from system properties, environment, application.properties/yaml/yml, project properties is
  * available in a Gradle task's configuration phase.
  */
-public final class BaseConfig {
+final class BaseConfig {
     private final Manifest manifest;
     private final PackageConfig packageConfig;
     private final NativeConfig nativeConfig;
@@ -39,7 +39,7 @@ public final class BaseConfig {
         values = config.getValues();
     }
 
-    public PackageConfig packageConfig() {
+    PackageConfig packageConfig() {
         return packageConfig;
     }
 
@@ -47,7 +47,7 @@ public final class BaseConfig {
         return nativeConfig;
     }
 
-    public PackageConfig.JarConfig.JarType jarType() {
+    PackageConfig.JarConfig.JarType jarType() {
         return packageConfig().jar().type();
     }
 
