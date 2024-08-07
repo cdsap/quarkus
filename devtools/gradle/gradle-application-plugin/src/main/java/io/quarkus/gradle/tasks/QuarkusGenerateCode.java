@@ -17,15 +17,7 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.tasks.CacheableTask;
-import org.gradle.api.tasks.CompileClasspath;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.OutputDirectory;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.*;
 import org.gradle.util.GradleVersion;
 import org.gradle.workers.WorkQueue;
 
@@ -49,11 +41,20 @@ public abstract class QuarkusGenerateCode extends QuarkusTask {
     private final LaunchMode launchMode;
     private final String inputSourceSetName;
 
+    private final QuarkusPluginExtensionView extensionView;
+
     @Inject
     public QuarkusGenerateCode(LaunchMode launchMode, String inputSourceSetName) {
         super("Performs Quarkus pre-build preparations, such as sources generation", true);
         this.launchMode = launchMode;
         this.inputSourceSetName = inputSourceSetName;
+        this.extensionView = getProject().getObjects().newInstance(QuarkusPluginExtensionView.class, extension());
+
+    }
+
+    @Nested
+    protected QuarkusPluginExtensionView getExtensionView() {
+        return extensionView;
     }
 
     /**
@@ -68,11 +69,6 @@ public abstract class QuarkusGenerateCode extends QuarkusTask {
 
     public void setCompileClasspath(Configuration compileClasspath) {
         this.compileClasspath = compileClasspath;
-    }
-
-    @Input
-    public Map<String, String> getCachingRelevantInput() {
-        return getExtensionView().getCachingRelevantInput().get();
     }
 
     @Input

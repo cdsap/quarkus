@@ -7,6 +7,7 @@ import static io.smallrye.common.expression.Expression.Flag.*;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,6 +23,8 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.process.JavaForkOptions;
 import org.gradle.util.GradleVersion;
 
+import io.quarkus.deployment.pkg.PackageConfig;
+import io.quarkus.gradle.QuarkusPlugin;
 import io.quarkus.gradle.dsl.Manifest;
 import io.quarkus.gradle.extension.QuarkusPluginExtension;
 import io.quarkus.maven.dependency.ResolvedDependency;
@@ -68,7 +71,11 @@ public abstract class QuarkusPluginExtensionView {
         getManifestSections().set(extension.manifest().getSections());
         getNativeEnabled().set(extension.baseConfig().nativeConfig().enabled());
         getNativeSourcesOnly().set(extension.baseConfig().nativeConfig().sourcesOnly());
-
+        getRunnerSuffix().set(extension.baseConfig().packageConfig().computedRunnerSuffix());
+        getRunnerName().set(extension.baseConfig().packageConfig().outputName().orElseGet(extension::finalName));
+        getOutputDirectory().set(Path.of(extension.baseConfig().packageConfig().outputDirectory().map(Path::toString)
+                .orElse(QuarkusPlugin.DEFAULT_OUTPUT_DIRECTORY)));
+        getJarType().set(extension.baseConfig().jarType());
     }
 
     private Provider<Map<String, String>> getQuarkusRelevantProjectProperties(Project project) {
@@ -133,6 +140,18 @@ public abstract class QuarkusPluginExtensionView {
     @Internal
     public abstract ConfigurableFileCollection getMainResources();
 
+    @Internal
+    public abstract Property<String> getRunnerSuffix();
+
+    @Internal
+    public abstract Property<String> getRunnerName();
+
+    @Internal
+    public abstract Property<Path> getOutputDirectory();
+
+    @Input
+    public abstract Property<PackageConfig.JarConfig.JarType> getJarType();
+
     @Input
     @Optional
     public abstract Property<String> getQuarkusProfileSystemVariable();
@@ -156,10 +175,6 @@ public abstract class QuarkusPluginExtensionView {
     @Input
     @Optional
     public abstract MapProperty<String, Attributes> getManifestSections();
-
-    /**
-     * TODO: Move out of this class?
-     */
 
     private void exportCustomManifestProperties(Map<String, Object> properties) {
         for (Map.Entry<String, Object> attribute : getManifestAttributes().get().entrySet()) {

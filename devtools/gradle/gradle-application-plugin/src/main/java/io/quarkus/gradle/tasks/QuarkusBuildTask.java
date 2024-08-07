@@ -16,15 +16,7 @@ import org.gradle.api.file.FileCopyDetails;
 import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.logging.LogLevel;
-import org.gradle.api.provider.MapProperty;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Classpath;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.api.tasks.StopExecutionException;
+import org.gradle.api.tasks.*;
 import org.gradle.util.GradleVersion;
 import org.gradle.workers.WorkQueue;
 
@@ -47,12 +39,22 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
     static final String QUARKUS_ARTIFACT_PROPERTIES = "quarkus-artifact.properties";
     static final String NATIVE_SOURCES = "native-sources";
     private final GACTV gactv;
+    private final QuarkusPluginExtensionView extensionView;
 
     QuarkusBuildTask(String description, boolean compatible) {
         super(description, compatible);
+        this.extensionView = getProject().getObjects().newInstance(QuarkusPluginExtensionView.class, extension());
 
         gactv = new GACTV(getProject().getGroup().toString(), getProject().getName(),
                 getProject().getVersion().toString());
+    }
+
+    /**
+     * Returns a view of the Quarkus extension that is compatible with the configuration cache.
+     */
+    @Nested
+    protected QuarkusPluginExtensionView getExtensionView() {
+        return extensionView;
     }
 
     @Inject
@@ -69,45 +71,13 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
         this.classpath = compileClasspath;
     }
 
-    private final Property<String> runnerBaseNameProperty = getProject().getObjects().property(String.class);
-
-    private final Property<Path> outputDirectoryProperty = getProject().getObjects().property(Path.class);
-
-    private final Property<String> runnerSuffixProperty = getProject().getObjects().property(String.class);
-
-    private final Property<PackageConfig.JarConfig.JarType> jarTypeProperty = getProject().getObjects()
-            .property(PackageConfig.JarConfig.JarType.class);
-
-    private final MapProperty<String, String> forcedProperties = getProject().getObjects()
-            .mapProperty(String.class, String.class);
-
-    @Internal
-    public Property<String> getRunnerSuffix() {
-        return runnerSuffixProperty;
-    }
-
-    @Internal
-    public Property<String> getRunnerName() {
-        return runnerBaseNameProperty;
-    }
-
-    @Internal
-    public Property<Path> getOutputDirectory() {
-        return outputDirectoryProperty;
-    }
-
-    @Input
-    public Property<PackageConfig.JarConfig.JarType> getJarType() {
-        return jarTypeProperty;
-    }
-
     @Input
     public Map<String, String> getCachingRelevantInput() {
         return getExtensionView().getCachingRelevantInput().get();
     }
 
     PackageConfig.JarConfig.JarType jarType() {
-        return getJarType().get();
+        return getExtensionView().getJarType().get();
     }
 
     boolean jarEnabled() {
@@ -184,15 +154,15 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
     }
 
     String runnerBaseName() {
-        return getRunnerName().get();
+        return getExtensionView().getRunnerName().get();
     }
 
     String outputDirectory() {
-        return outputDirectoryProperty.get().toString();
+        return getExtensionView().getOutputDirectory().get().toString();
     }
 
     private String runnerSuffix() {
-        return getRunnerSuffix().get();
+        return getExtensionView().getRunnerSuffix().get();
 
     }
 
