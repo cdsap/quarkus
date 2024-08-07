@@ -57,6 +57,10 @@ public final class EffectiveConfig {
         // 100 -> microprofile.properties in classpath (provided by default sources)
         // 0 -> fallback config source for error workaround (see below)
 
+        // Removing problematic property breaking configuration cache
+        Map<String, String> defaultPropertiesFiltered = builder.defaultProperties;
+        defaultPropertiesFiltered.remove("idea.io.use.nio2");
+
         this.config = ConfigUtils.emptyConfigBuilder()
                 .forClassLoader(toUrlClassloader(builder.sourceDirectories))
                 .withSources(new PropertiesConfigSource(builder.forcedProperties, "forcedProperties", 600))
@@ -70,7 +74,8 @@ public final class EffectiveConfig {
                 // todo: this is due to ApplicationModel#getPlatformProperties not being included in the effective config
                 .withSources(new PropertiesConfigSource(Map.of("platform.quarkus.native.builder-image", "<<ignored>>"),
                         "NativeConfig#builderImage", 0))
-                .withDefaultValues(builder.defaultProperties)
+
+                .withDefaultValues(defaultPropertiesFiltered)
                 .withProfile(builder.profile)
                 .withMapping(PackageConfig.class)
                 .withMapping(NativeConfig.class)
