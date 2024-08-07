@@ -159,6 +159,7 @@ public final class EffectiveConfig {
 
         Builder withDefaultProperties(Map<String, String> defaultProperties) {
             this.defaultProperties = defaultProperties;
+            this.defaultProperties.remove("idea.io.use.nio2");
             return this;
         }
 
