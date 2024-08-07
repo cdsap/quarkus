@@ -28,7 +28,6 @@ import io.quarkus.deployment.pkg.PackageConfig;
 import io.quarkus.runtime.configuration.ApplicationPropertiesConfigSourceLoader;
 import io.quarkus.runtime.configuration.ConfigUtils;
 import io.smallrye.config.AbstractLocationConfigSourceLoader;
-import io.smallrye.config.EnvConfigSource;
 import io.smallrye.config.Expressions;
 import io.smallrye.config.PropertiesConfigSource;
 import io.smallrye.config.PropertiesConfigSourceProvider;
@@ -69,7 +68,8 @@ public final class EffectiveConfig {
 
         configSources.add(new PropertiesConfigSource(builder.forcedProperties, "forcedProperties", 600));
         configSources.add(new PropertiesConfigSource(asStringMap(builder.taskProperties), "taskProperties", 500));
-        Map<String, String> systemPropertiesWithoutConfCacheProblematicEntries = ConfigSourceUtil.propertiesToMap(System.getProperties());
+        Map<String, String> systemPropertiesWithoutConfCacheProblematicEntries = ConfigSourceUtil
+                .propertiesToMap(System.getProperties());
         systemPropertiesWithoutConfCacheProblematicEntries.remove("idea.io.use.nio2");
         configSources.add(new PropertiesConfigSource(systemPropertiesWithoutConfCacheProblematicEntries,
                 "System.getProperties()", 400));
