@@ -94,21 +94,6 @@ public class ProjectDescriptorBuilder {
     }
 
     private void readConfigurationFor(Test task) {
-        //        if (task.getEnabled() && !task.getSource().isEmpty()) {
-        //            File destDir = task.getDestinationDirectory().getAsFile().get();
-        //            task.getSource().visit(fileVisitDetails -> {
-        //                if (fileVisitDetails.getRelativePath().getParent().toString().isEmpty()) {
-        //                    File srcDir = fileVisitDetails.getFile().getParentFile();
-        //                    builder.tasks.put(task.getName(), new QuarkusTaskDescriptor(task.getName(), COMPILE, srcDir, destDir));
-        //                    SourceSetContainer sourceSets = task.getProject().getExtensions().getByType(SourceSetContainer.class);
-        //                    sourceSets.stream().filter(sourceSet -> sourceSet.getOutput().getClassesDirs().contains(destDir))
-        //                            .forEach(sourceSet -> builder.sourceSetTasks
-        //                                    .computeIfAbsent(sourceSet.getName(), s -> ConcurrentHashMap.newKeySet())
-        //                                    .add(task.getName()));
-        //                    fileVisitDetails.stopVisiting();
-        //                }
-        //            });
-        //        }
     }
 
     private void readConfigurationFor(ProcessResources task) {
@@ -139,7 +124,6 @@ public class ProjectDescriptorBuilder {
     }
 
     private void readConfigurationFor(KotlinJvmCompile task) {
-        // TODO add task to sourceSetTasks
         if (task.getEnabled() && !task.getSources().isEmpty()) {
             File destDir = task.getDestinationDirectory().getAsFile().get();
             AtomicReference<File> srcDir = new AtomicReference<>();
