@@ -41,12 +41,15 @@ public class TasksConfigurationCacheCompatibilityTest {
                 DEPLOY_TASK_NAME);
     }
 
+
     @ParameterizedTest
     @MethodSource("compatibleTasks")
     public void configurationCacheIsReusedTest(String taskName) throws IOException, URISyntaxException {
         URL url = getClass().getClassLoader().getResource("io/quarkus/gradle/tasks/configurationcache/main");
         FileUtils.copyDirectory(new File(url.toURI()), testProjectDir.toFile());
         FileUtils.copyFile(new File("../gradle.properties"), testProjectDir.resolve("gradle.properties").toFile());
+
+        buildResult(":help", "--configuration-cache");
 
         BuildResult firstBuild = buildResult(taskName, "--configuration-cache");
         assertTrue(firstBuild.getOutput().contains("Configuration cache entry stored"));
