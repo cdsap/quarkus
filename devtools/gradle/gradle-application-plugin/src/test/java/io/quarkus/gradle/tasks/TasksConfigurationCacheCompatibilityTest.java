@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -43,6 +44,7 @@ public class TasksConfigurationCacheCompatibilityTest {
     }
 
     @Test
+    @Order(1)
     public void quarkusBuildFooTest() {
         GradleRunner.create()
                 .withPluginClasspath()
