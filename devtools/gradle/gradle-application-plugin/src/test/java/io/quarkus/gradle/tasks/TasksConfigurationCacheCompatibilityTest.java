@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -39,6 +40,15 @@ public class TasksConfigurationCacheCompatibilityTest {
                 IMAGE_BUILD_TASK_NAME,
                 IMAGE_PUSH_TASK_NAME,
                 DEPLOY_TASK_NAME);
+    }
+
+    @Test
+    public void quarkusBuildFooTest() {
+        return GradleRunner.create()
+                .withPluginClasspath()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments(":help", "--info", "--stacktrace", "--build-cache", configurationCacheCommand)
+                .build();
     }
 
     @ParameterizedTest
