@@ -41,7 +41,6 @@ public class TasksConfigurationCacheCompatibilityTest {
                 DEPLOY_TASK_NAME);
     }
 
-
     @ParameterizedTest
     @MethodSource("compatibleTasks")
     public void configurationCacheIsReusedTest(String taskName) throws IOException, URISyntaxException {
