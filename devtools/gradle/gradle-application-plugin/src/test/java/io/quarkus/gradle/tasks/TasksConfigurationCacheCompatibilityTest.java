@@ -48,11 +48,16 @@ public class TasksConfigurationCacheCompatibilityTest {
 
     @Test
     @Order(1)
-    public void quarkusBuildFooTest() {
+    public void quarkusBuildFooTest() throws IOException, URISyntaxException {
+        URL url = getClass().getClassLoader().getResource("io/quarkus/gradle/tasks/configurationcache/main");
+        FileUtils.copyDirectory(new File(url.toURI()), testProjectDir.toFile());
+        FileUtils.copyFile(new File("../gradle.properties"), testProjectDir.resolve("gradle.properties").toFile());
+
         GradleRunner.create()
                 .withPluginClasspath()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments(":help", "--info", "--stacktrace", "--build-cache")
+                .withArguments(QUARKUS_GENERATE_CODE_TASK_NAME, "--info", "--stacktrace", "--build-cache",
+                        "--configuration-cache")
                 .build();
         assertTrue(true);
     }
