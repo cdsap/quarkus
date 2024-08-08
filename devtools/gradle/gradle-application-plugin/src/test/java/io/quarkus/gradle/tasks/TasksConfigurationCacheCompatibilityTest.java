@@ -58,6 +58,7 @@ public class TasksConfigurationCacheCompatibilityTest {
     }
 
     @ParameterizedTest
+    @Order(4)
     @MethodSource("compatibleTasks")
     public void configurationCacheIsReusedTest(String taskName) throws IOException, URISyntaxException {
         URL url = getClass().getClassLoader().getResource("io/quarkus/gradle/tasks/configurationcache/main");
@@ -74,6 +75,7 @@ public class TasksConfigurationCacheCompatibilityTest {
     }
 
     @ParameterizedTest
+    @Order(5)
     @MethodSource("compatibleTasks")
     public void configurationCacheIsReusedWhenProjectIsolationIsUsedTest(String taskName)
             throws IOException, URISyntaxException {
@@ -90,6 +92,7 @@ public class TasksConfigurationCacheCompatibilityTest {
     }
 
     @ParameterizedTest
+    @Order(2)
     @MethodSource("nonCompatibleQuarkusBuildTasks")
     public void quarkusBuildTasksNonCompatibleWithConfigurationCacheNotFail(String taskName)
             throws IOException, URISyntaxException {
@@ -104,6 +107,7 @@ public class TasksConfigurationCacheCompatibilityTest {
 
     @ParameterizedTest
     @MethodSource("nonCompatibleQuarkusBuildTasks")
+    @Order(3)
     public void quarkusBuildTasksNonCompatibleWithConfigurationCacheNotFailWhenUsingConfigurationCache(String taskName)
             throws IOException, URISyntaxException {
         URL url = getClass().getClassLoader().getResource("io/quarkus/gradle/tasks/configurationcache/main");
