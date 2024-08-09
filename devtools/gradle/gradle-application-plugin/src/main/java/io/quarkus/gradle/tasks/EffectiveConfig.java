@@ -15,17 +15,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import org.eclipse.microprofile.config.spi.ConfigSource;
-
 import com.google.common.annotations.VisibleForTesting;
 
 import io.quarkus.deployment.configuration.ClassLoadingConfig;
 import io.quarkus.deployment.configuration.ConfigCompatibility;
 import io.quarkus.deployment.pkg.NativeConfig;
 import io.quarkus.deployment.pkg.PackageConfig;
-import io.quarkus.runtime.configuration.QuarkusConfigBuilderCustomizer;
-import io.smallrye.config.*;
-import io.smallrye.config.common.utils.ConfigSourceUtil;
+import io.quarkus.runtime.configuration.ConfigUtils;
+import io.smallrye.config.Expressions;
+import io.smallrye.config.PropertiesConfigSource;
+import io.smallrye.config.SmallRyeConfig;
 import io.smallrye.config.source.yaml.YamlConfigSourceLoader;
 
 /**
@@ -42,25 +41,6 @@ public final class EffectiveConfig {
     private final Map<String, String> values;
 
     private EffectiveConfig(Builder builder) {
-        List<ConfigSource> configSources = new ArrayList<>();
-        configSources.add(new PropertiesConfigSource(builder.forcedProperties, "forcedProperties", 600));
-        configSources.add(new PropertiesConfigSource(asStringMap(builder.taskProperties), "taskProperties", 500));
-        Map<String, String> systemPropertiesWithoutConfCacheProblematicEntries = ConfigSourceUtil
-                .propertiesToMap(System.getProperties());
-        systemPropertiesWithoutConfCacheProblematicEntries.remove("idea.io.use.nio2");
-        configSources.add(new PropertiesConfigSource(systemPropertiesWithoutConfCacheProblematicEntries,
-                "System.getProperties()", 400));
-        //  Commented the EnvConfigSource because configuration cache is invalidated on every build because:
-        //  "Calculating task graph as configuration cache cannot be reused because environment variable 'APP_ICON_65671' has changed."
-        //        configSources.add(new EnvConfigSource(300) {
-        //        });
-        //        })
-        configSources.add(new PropertiesConfigSource(builder.buildProperties, "quarkusBuildProperties", 290));
-        configSources.add(new PropertiesConfigSource(asStringMap(builder.projectProperties), "projectProperties", 280));
-
-        // todo: this is due to ApplicationModel#getPlatformProperties not being included in the effective config
-        configSources.add(new PropertiesConfigSource(Map.of("platform.quarkus.native.builder-image", "<<ignored>>"),
-                "NativeConfig#builderImage", 0));
         // Effective "ordinals" for the config sources:
         // (see also https://quarkus.io/guides/config-reference#configuration-sources)
         // 600 -> forcedProperties
@@ -77,30 +57,20 @@ public final class EffectiveConfig {
         // 100 -> microprofile.properties in classpath (provided by default sources)
         // 0 -> fallback config source for error workaround (see below)
 
-        // Removing problematic property breaking configuration cache
-        Map<String, String> defaultPropertiesFiltered = builder.defaultProperties;
-        defaultPropertiesFiltered.remove("idea.io.use.nio2");
-        SmallRyeConfigBuilder builder1 = new SmallRyeConfigBuilder()
-                .forClassLoader(Thread.currentThread().getContextClassLoader())
-                .withCustomizers(new QuarkusConfigBuilderCustomizer())
-                .addDiscoveredConverters()
-                .addDefaultInterceptors()
-                .addDiscoveredInterceptors()
-                //    .addPropertiesSources()
-                .addDiscoveredSecretKeysHandlers();
-
-        this.config = builder1
+        this.config = ConfigUtils.emptyConfigBuilder()
                 .forClassLoader(toUrlClassloader(builder.sourceDirectories))
-                .withSources(configSources)
-
+                .withSources(new PropertiesConfigSource(builder.forcedProperties, "forcedProperties", 600))
+                .withSources(new PropertiesConfigSource(asStringMap(builder.taskProperties), "taskProperties", 500))
+                .addSystemSources()
+                .withSources(new PropertiesConfigSource(builder.buildProperties, "quarkusBuildProperties", 290))
+                .withSources(new PropertiesConfigSource(asStringMap(builder.projectProperties), "projectProperties", 280))
                 .withSources(new YamlConfigSourceLoader.InFileSystem())
                 .withSources(new YamlConfigSourceLoader.InClassPath())
-                //    .addPropertiesSources()
+                .addPropertiesSources()
                 // todo: this is due to ApplicationModel#getPlatformProperties not being included in the effective config
                 .withSources(new PropertiesConfigSource(Map.of("platform.quarkus.native.builder-image", "<<ignored>>"),
                         "NativeConfig#builderImage", 0))
-
-                //     .withDefaultValues(defaultPropertiesFiltered)
+                .withDefaultValues(builder.defaultProperties)
                 .withProfile(builder.profile)
                 .withMapping(PackageConfig.class)
                 .withMapping(NativeConfig.class)
@@ -183,7 +153,7 @@ public final class EffectiveConfig {
         }
 
         Builder withDefaultProperties(Map<String, String> defaultProperties) {
-            // this.defaultProperties = defaultProperties;
+            this.defaultProperties = defaultProperties;
             return this;
         }
 
