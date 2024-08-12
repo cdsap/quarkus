@@ -4,11 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -108,7 +104,8 @@ public abstract class QuarkusGenerateCode extends QuarkusTask {
     @TaskAction
     public void generateCode() throws IOException {
         ApplicationModel appModel = ToolingUtils.deserializeAppModel(getApplicationModel().get().getAsFile().toPath());
-        Map<String, String> configMap = getExtensionView().buildEffectiveConfiguration(appModel.getAppArtifact()).getValues();
+        Map<String, String> configMap = getExtensionView()
+                .buildEffectiveConfiguration(appModel.getAppArtifact(), new HashMap<>()).getValues();
 
         File outputPath = getGeneratedOutputDirectory().get().getAsFile();
 

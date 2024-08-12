@@ -31,10 +31,6 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     private static final String NATIVE_PROPERTY_NAMESPACE = "quarkus.native";
     public static final String QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD = "quarkus.ignore.legacy.deploy.build";
 
-    private boolean nativeArgumentsAdded = false;
-
-    private final Map<String, String> mutableForcedProperties = new HashMap<>();
-
     @Inject
     public QuarkusBuild() {
         super("Builds a Quarkus application.", true);
@@ -42,23 +38,12 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
     @SuppressWarnings("unused")
     public QuarkusBuild nativeArgs(Action<Map<String, ?>> action) {
-        Map<String, Object> mutableForcedProperties = new HashMap<>(getForcedProperties());
         Map<String, ?> nativeArgsMap = new HashMap<>();
         action.execute(nativeArgsMap);
         for (Map.Entry<String, ?> nativeArg : nativeArgsMap.entrySet()) {
-            mutableForcedProperties.put(expandConfigurationKey(nativeArg.getKey()), nativeArg.getValue());
+            additionalForcedProperties.put(expandConfigurationKey(nativeArg.getKey()), nativeArg.getValue().toString());
         }
-        action.execute(mutableForcedProperties);
         return this;
-    }
-
-    @Internal
-    public Map<String, String> getForcedProperties() {
-        if (nativeArgumentsAdded) {
-            return mutableForcedProperties;
-        } else {
-            return getExtensionView().getForcedProperties().get();
-        }
     }
 
     @Internal

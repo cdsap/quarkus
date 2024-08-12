@@ -26,6 +26,6 @@ quarkus {
         attributes(mapOf("Manifest-Attribute" to "some-value"))
     }
 
-    // The following line is replaced by the tests in `CachingTest`
+    // The following line is replaced by the tests in `TasksConfigurationCacheCompatibilityTest`
     // ADDITIONAL_CONFIG
 }

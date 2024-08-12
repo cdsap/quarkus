@@ -190,7 +190,8 @@ public abstract class QuarkusPluginExtensionView {
         }
     }
 
-    protected EffectiveConfig buildEffectiveConfiguration(ResolvedDependency appArtifact) {
+    protected EffectiveConfig buildEffectiveConfiguration(ResolvedDependency appArtifact,
+            Map<String, ?> additionalForcedProperties) {
         Map<String, Object> properties = new HashMap<>();
         exportCustomManifestProperties(properties);
 
@@ -207,6 +208,9 @@ public abstract class QuarkusPluginExtensionView {
         getProjectProperties().get().forEach((k, v) -> {
             forced.put(k, v.toString());
 
+        });
+        additionalForcedProperties.forEach((k, v) -> {
+            forced.put(k, v.toString());
         });
         if (getNativeBuild().get()) {
             forced.put("quarkus.native.enabled", "true");

@@ -24,7 +24,6 @@ import io.quarkus.bootstrap.model.ApplicationModel;
 import io.quarkus.deployment.pkg.PackageConfig;
 import io.quarkus.gradle.tasks.worker.BuildWorker;
 import io.quarkus.gradle.tooling.ToolingUtils;
-import io.quarkus.maven.dependency.GACTV;
 import io.smallrye.config.Expressions;
 import io.smallrye.config.SmallRyeConfig;
 
@@ -38,15 +37,12 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
     private static final String QUARKUS_BUILD_DEP_DIR = QUARKUS_BUILD_DIR + "/dep";
     static final String QUARKUS_ARTIFACT_PROPERTIES = "quarkus-artifact.properties";
     static final String NATIVE_SOURCES = "native-sources";
-    private final GACTV gactv;
     private final QuarkusPluginExtensionView extensionView;
+    protected final Map<String, String> additionalForcedProperties = new HashMap<>();
 
     QuarkusBuildTask(String description, boolean compatible) {
         super(description, compatible);
         this.extensionView = getProject().getObjects().newInstance(QuarkusPluginExtensionView.class, extension());
-
-        gactv = new GACTV(getProject().getGroup().toString(), getProject().getName(),
-                getProject().getVersion().toString());
     }
 
     /**
@@ -236,7 +232,8 @@ public abstract class QuarkusBuildTask extends QuarkusTask {
         });
 
         ApplicationModel appModel = resolveAppModelForBuild();
-        SmallRyeConfig config = getExtensionView().buildEffectiveConfiguration(appModel.getAppArtifact()).getConfig();
+        SmallRyeConfig config = getExtensionView()
+                .buildEffectiveConfiguration(appModel.getAppArtifact(), additionalForcedProperties).getConfig();
         Map<String, String> quarkusProperties = Expressions.withoutExpansion(() -> {
             Map<String, String> values = new HashMap<>();
             for (String key : config.getMapKeys("quarkus").values()) {
