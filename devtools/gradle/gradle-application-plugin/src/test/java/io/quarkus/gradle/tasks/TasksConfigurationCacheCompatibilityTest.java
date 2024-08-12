@@ -40,7 +40,6 @@ public class TasksConfigurationCacheCompatibilityTest {
 
     private static Stream<String> nonCompatibleQuarkusBuildTasks() {
         return Stream.of(
-                QUARKUS_RUN_TASK_NAME,
                 IMAGE_BUILD_TASK_NAME,
                 IMAGE_PUSH_TASK_NAME,
                 DEPLOY_TASK_NAME);
@@ -92,7 +91,6 @@ public class TasksConfigurationCacheCompatibilityTest {
         assertTrue(firstBuild.getOutput().contains("Configuration cache entry stored"));
 
         BuildResult secondBuild = buildResult(taskName, "-Dorg.gradle.unsafe.isolated-projects=true");
-        System.out.println(secondBuild.getOutput());
         assertTrue(secondBuild.getOutput().contains("Reusing configuration cache."));
     }
 
