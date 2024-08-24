@@ -6,10 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 public class ImageTasksWithConfigurationCacheTest extends QuarkusGradleWrapperTestBase {
 
     @Test
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "cannot access the file because another process has locked a portion of the file")
     public void shouldReuseConfigurationCacheImageBuildIfTheExtensionIsAdded() throws Exception {
         File projectDir = getProjectDir("it-test-basic-project");
 
@@ -25,6 +28,7 @@ public class ImageTasksWithConfigurationCacheTest extends QuarkusGradleWrapperTe
     }
 
     @Test
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "cannot access the file because another process has locked a portion of the file")
     public void shouldReuseConfigurationCacheWithProjectIsolationImageBuildIfTheExtensionIsAdded() throws Exception {
         File projectDir = getProjectDir("it-test-basic-project");
 
