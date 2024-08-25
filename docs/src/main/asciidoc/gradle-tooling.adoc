@@ -835,8 +835,8 @@ The current state of compatibility is shown in the following table:
 |`quarkusGoOffline`|❌
 |`quarkusInfo`|❌
 |`quarkusUpdate`|❌
-|`imageBuild`|❌
-|`imagePush`|❌
+|`imageBuild`|✅
+|`imagePush`|✅
 |`deploy`|❌
 |`listExtensions`|❌
 |`listCategories`|❌
