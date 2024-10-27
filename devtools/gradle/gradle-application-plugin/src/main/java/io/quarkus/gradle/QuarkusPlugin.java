@@ -522,9 +522,7 @@ public class QuarkusPlugin implements Plugin<Project> {
         task.getAppClasspath().configureFrom(classpath.getRuntimeConfigurationWithoutResolvingDeployment());
         task.getDeploymentClasspath().configureFrom(classpath.getDeploymentConfiguration());
         task.getPlatformConfiguration().configureFrom(classpath.getPlatformConfiguration());
-        task.getOriginalC().from(classpath.getPlatformConfiguration());
-        task.getPlatformImportProperties().set(classpath.getPlatformImportsWithoutResolvingPlatform2().getPlatformProperties());
-        task.getPlatformImport2().set(classpath.getPlatformImportsWithoutResolvingPlatform());
+        task.getPlatformImport().set(classpath.getPlatformImportsWithoutResolvingPlatform());
         task.getApplicationModel().set(project.getLayout().getBuildDirectory().file(quarkusModelFile));
     }
 

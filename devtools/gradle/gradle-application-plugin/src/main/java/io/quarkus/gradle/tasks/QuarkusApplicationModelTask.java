@@ -32,7 +32,6 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.*;
 
@@ -86,9 +85,6 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
     @CompileClasspath
     public abstract ConfigurableFileCollection getOriginalClasspath();
 
-    @InputFiles
-    public abstract ConfigurableFileCollection getOriginalC();
-
     @Nested
     public abstract QuarkusResolvedClasspath getPlatformConfiguration();
 
@@ -102,10 +98,7 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
     public abstract Property<LaunchMode> getLaunchMode();
 
     @Internal
-    public abstract Property<PlatformImports> getPlatformImport2();
-
-    @Internal
-    public abstract MapProperty<String, String> getPlatformImportProperties();
+    public abstract Property<PlatformImportsImpl> getPlatformImport();
 
     /**
      * If any project task changes, we will invalidate this task anyway
@@ -122,24 +115,10 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
 
     @TaskAction
     public void execute() throws IOException {
-        PlatformImportsImpl x = new PlatformImportsImpl();
-        x.setPlatformProperties(getPlatformImportProperties().get());
-        getPlatformImport2().get().getImportedPlatformBoms().stream().forEach(new Consumer<ArtifactCoords>() {
-            @Override
-            public void accept(ArtifactCoords artifactCoords) {
-                x.addPlatformDescriptor(artifactCoords.getGroupId(),
-                        artifactCoords.getArtifactId() + "-quarkus-platform-descriptor", artifactCoords.getVersion(), "json",
-                        artifactCoords.getVersion());
-            }
-        });
-        Map<ComponentIdentifier, List<QuarkusResolvedArtifact>> artifactsByCapability = getPlatformConfiguration()
-                .resolvedArtifactsByComponentIdentifier();
-        PlatformImportsImpl platformImports = new PlatformImportsImpl();
-        platformImports.setPlatformProperties(getPlatformImport2().get().getPlatformProperties());
         final ResolvedDependencyBuilder appArtifact = getProjectArtifact();
         final ApplicationModelBuilder modelBuilder = new ApplicationModelBuilder()
                 .setAppArtifact(appArtifact)
-                .setPlatformImports(x)
+                .setPlatformImports(getPlatformImport().get())
                 .addReloadableWorkspaceModule(appArtifact.getKey());
         collectDependencies(getAppClasspath(), modelBuilder, appArtifact.getWorkspaceModule().mutable());
         collectExtensionDependencies(getDeploymentClasspath(), modelBuilder);

@@ -33,7 +33,6 @@ import io.quarkus.bootstrap.resolver.AppModelResolverException;
 import io.quarkus.gradle.tooling.ToolingUtils;
 import io.quarkus.gradle.tooling.dependency.DependencyUtils;
 import io.quarkus.gradle.tooling.dependency.ExtensionDependency;
-import io.quarkus.maven.dependency.ArtifactCoords;
 import io.quarkus.runtime.LaunchMode;
 
 public class ApplicationDeploymentClasspathBuilder {
@@ -180,17 +179,8 @@ public class ApplicationDeploymentClasspathBuilder {
                     final String group = identifier.getGroup();
                     final String name = identifier.getName();
                     if (name.endsWith(BootstrapConstants.PLATFORM_DESCRIPTOR_ARTIFACT_ID_SUFFIX)) {
-                        ArtifactCoords bomCoords = ArtifactCoords.pom(group,
-                                name.substring(0, name.length() - "-quarkus-platform-descriptor".length()),
+                        platformImports.addPlatformDescriptor(group, name, d.getTarget().getVersion(), "json",
                                 d.getTarget().getVersion());
-                        List<ArtifactCoords> existingBoms = platformImports.getImportedPlatformBoms().stream()
-                                .filter(cd -> cd.toGACTVString().equals(bomCoords.toGACTVString()))
-                                .collect(Collectors.toList());
-
-                        if (existingBoms.isEmpty()) {
-                            platformImports.addPlatformDescriptor(group, name, d.getTarget().getVersion(), "json",
-                                    d.getTarget().getVersion());
-                        }
                     } else if (name.endsWith(BootstrapConstants.PLATFORM_PROPERTIES_ARTIFACT_ID_SUFFIX)) {
                         final DefaultDependencyArtifact dep = new DefaultDependencyArtifact();
                         dep.setExtension("properties");
@@ -323,7 +313,7 @@ public class ApplicationDeploymentClasspathBuilder {
         return platformImports.get(this.platformImportName);
     }
 
-    public PlatformImports getPlatformImportsWithoutResolvingPlatform() {
+    public PlatformImportsImpl getPlatformImportsWithoutResolvingPlatform() {
         return platformImports.get(this.platformImportName);
     }
 

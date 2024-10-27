@@ -10,12 +10,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -29,10 +24,11 @@ public class PlatformImportsTest {
     private final List<PlatformProps> platformProps = new ArrayList<>();
 
     @AfterEach
-    public void cleanUp() {
+    public void cleanUp() throws IOException {
         for (PlatformProps p : platformProps) {
             p.delete();
         }
+        Files.deleteIfExists(Path.of("quarkus-platform.properties"));
     }
 
     @Test
@@ -114,6 +110,14 @@ public class PlatformImportsTest {
                         GACTV.fromString("io.playground:acme-bom::pom:2.2.2")))));
     }
 
+    @Test
+    public void duplicatePlatformDescriptorsAreIgnored() {
+        final PlatformImportsImpl pi = new PlatformImportsImpl();
+        pi.addPlatformDescriptor("io.playground", "acme-bom-quarkus-platform-descriptor", "", "", "1.1");
+        pi.addPlatformDescriptor("io.playground", "acme-bom-quarkus-platform-descriptor", "", "", "1.1");
+        assertTrue(pi.getImportedPlatformBoms().size() == 1);
+    }
+
     private PlatformProps newPlatformProps() throws IOException {
         final PlatformProps p = new PlatformProps();
         platformProps.add(p);
@@ -156,4 +160,5 @@ public class PlatformImportsTest {
             IoUtils.recursiveDelete(path);
         }
     }
+
 }
