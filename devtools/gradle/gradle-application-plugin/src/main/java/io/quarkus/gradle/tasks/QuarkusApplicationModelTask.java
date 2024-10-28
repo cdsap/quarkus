@@ -15,6 +15,9 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import io.quarkus.bootstrap.model.ApplicationModelBuilder;
+import io.quarkus.bootstrap.model.CapabilityContract;
+import io.quarkus.bootstrap.model.PlatformImports;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.artifacts.ArtifactCollection;
 import org.gradle.api.artifacts.Configuration;
@@ -33,12 +36,10 @@ import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.*;
 
 import com.google.common.base.Preconditions;
 
 import io.quarkus.bootstrap.BootstrapConstants;
-import io.quarkus.bootstrap.model.*;
 import io.quarkus.bootstrap.workspace.ArtifactSources;
 import io.quarkus.bootstrap.workspace.DefaultArtifactSources;
 import io.quarkus.bootstrap.workspace.DefaultSourceDir;
@@ -61,6 +62,14 @@ import io.quarkus.paths.PathCollection;
 import io.quarkus.paths.PathList;
 import io.quarkus.runtime.LaunchMode;
 import io.quarkus.runtime.util.HashUtil;
+import org.gradle.api.tasks.CompileClasspath;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.InputFiles;
+import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Nested;
+import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.TaskAction;
 
 public abstract class QuarkusApplicationModelTask extends DefaultTask {
 
@@ -98,7 +107,7 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
     public abstract Property<LaunchMode> getLaunchMode();
 
     @Internal
-    public abstract Property<PlatformImportsImpl> getPlatformImport();
+    public abstract Property<PlatformImports> getPlatformImports();
 
     /**
      * If any project task changes, we will invalidate this task anyway
@@ -118,7 +127,7 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
         final ResolvedDependencyBuilder appArtifact = getProjectArtifact();
         final ApplicationModelBuilder modelBuilder = new ApplicationModelBuilder()
                 .setAppArtifact(appArtifact)
-                .setPlatformImports(getPlatformImport().get())
+                .setPlatformImports(getPlatformImports().get())
                 .addReloadableWorkspaceModule(appArtifact.getKey());
         collectDependencies(getAppClasspath(), modelBuilder, appArtifact.getWorkspaceModule().mutable());
         collectExtensionDependencies(getDeploymentClasspath(), modelBuilder);
@@ -249,7 +258,6 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
             Set<ArtifactKey> processedModules,
             byte flags,
             Set<ResolvedDependencyResult> directDependencies) {
-        Integer b = new Random().nextInt();
         WorkspaceModule.Mutable projectModule = null;
         List<QuarkusResolvedArtifact> artifacts = findArtifacts(resolvedDependency, resolvedArtifacts);
         if (artifacts.isEmpty()) {
