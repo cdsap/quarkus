@@ -501,12 +501,13 @@ public class QuarkusPlugin implements Plugin<Project> {
             LaunchMode launchMode, String quarkusModelFile) {
         task.getProjectDescriptor().set(projectDescriptor);
         task.getLaunchMode().set(launchMode);
+        task.getTypeModel().set(task.getPath());
         task.getOriginalClasspath().setFrom(classpath.getOriginalRuntimeClasspathAsInput());
         task.getAppClasspath().configureFrom(classpath.getRuntimeConfigurationWithoutResolvingDeployment());
         task.getPlatformConfiguration().configureFrom(classpath.getPlatformConfiguration());
         task.getDeploymentClasspath().configureFrom(classpath.getDeploymentConfiguration());
         task.getDeploymentResolvedWorkaround().from(classpath.getDeploymentConfiguration().getIncoming().getFiles());
-        task.getPlatformImportProperties().set(classpath.getPlatformImportsWithoutResolvingPlatform().getPlatformProperties());
+        task.getPlatformImports().set(classpath.getPlatformImportsWithoutResolvingPlatform());
         task.getApplicationModel().set(project.getLayout().getBuildDirectory().file(quarkusModelFile));
     }
 
