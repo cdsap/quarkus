@@ -58,14 +58,13 @@ public class TasksConfigurationCacheCompatibilityTest {
         FileUtils.copyFile(new File("../gradle.properties"), testProjectDir.resolve("gradle.properties").toFile());
 
         GradleRunner.create()
-            .withPluginClasspath()
-            .withProjectDir(testProjectDir.toFile())
-            .withArguments(QUARKUS_GENERATE_CODE_TASK_NAME, "--info", "--stacktrace", "--build-cache",
-                "--configuration-cache")
-            .build();
+                .withPluginClasspath()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments(QUARKUS_GENERATE_CODE_TASK_NAME, "--info", "--stacktrace", "--build-cache",
+                        "--configuration-cache")
+                .build();
         assertTrue(true);
     }
-
 
     @ParameterizedTest
     @Order(2)
