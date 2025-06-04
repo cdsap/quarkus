@@ -36,10 +36,7 @@ import org.gradle.api.artifacts.ResolvableDependencies;
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
 import org.gradle.api.artifacts.component.ComponentIdentifier;
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.artifacts.result.DependencyResult;
-import org.gradle.api.artifacts.result.ResolvedArtifactResult;
-import org.gradle.api.artifacts.result.ResolvedComponentResult;
-import org.gradle.api.artifacts.result.ResolvedDependencyResult;
+import org.gradle.api.artifacts.result.*;
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileCollection;
@@ -311,7 +308,9 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
                     .setRuntimeCp()
                     .setDeploymentCp();
             Utils.processQuarkusDependency(artifactBuilder, modelBuilder);
+            // if(!name.contains("module-testfixtures")) {
             modelBuilder.addDependency(artifactBuilder);
+            // }
         }
     }
 
@@ -344,7 +343,7 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
 
         ModuleVersionIdentifier moduleVersionIdentifier = Preconditions
                 .checkNotNull(resolvedDependency.getSelected().getModuleVersion());
-
+        boolean containsFixtures = containsFixtures(artifacts, moduleVersionIdentifier);
         for (QuarkusResolvedArtifact artifact : artifacts) {
             String classifier = resolveClassifier(moduleVersionIdentifier, artifact.file);
             ArtifactKey artifactKey = new GACT(
@@ -383,7 +382,13 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
             if (!isFlagOn(flags, COLLECT_RELOADABLE_MODULES)) {
                 depBuilder.clearFlag(DependencyFlags.RELOADABLE);
             }
-            modelBuilder.addDependency(depBuilder);
+
+            // The configuration classpath includes the main source set of test-fixtures.
+            // We need to exclude it to avoid unintended dependencies in the test scope.
+            if (!containsFixtures || classifier.equals("test-fixtures")) {
+                modelBuilder.addDependency(depBuilder);
+            }
+
             collectedArtifactFiles.add(artifact.file);
         }
 
@@ -399,6 +404,13 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
                 }
             }
         }
+    }
+
+    private static boolean containsFixtures(List<QuarkusResolvedArtifact> artifacts,
+            ModuleVersionIdentifier moduleVersionIdentifier) {
+        return artifacts.stream()
+                .map(artifact -> resolveClassifier(moduleVersionIdentifier, artifact.file))
+                .anyMatch("test-fixtures"::equals);
     }
 
     private static boolean isDependency(QuarkusResolvedArtifact a) {
