@@ -36,7 +36,10 @@ import org.gradle.api.artifacts.ResolvableDependencies;
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
 import org.gradle.api.artifacts.component.ComponentIdentifier;
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.artifacts.result.*;
+import org.gradle.api.artifacts.result.DependencyResult;
+import org.gradle.api.artifacts.result.ResolvedArtifactResult;
+import org.gradle.api.artifacts.result.ResolvedComponentResult;
+import org.gradle.api.artifacts.result.ResolvedDependencyResult;
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileCollection;
@@ -308,9 +311,7 @@ public abstract class QuarkusApplicationModelTask extends DefaultTask {
                     .setRuntimeCp()
                     .setDeploymentCp();
             Utils.processQuarkusDependency(artifactBuilder, modelBuilder);
-            // if(!name.contains("module-testfixtures")) {
             modelBuilder.addDependency(artifactBuilder);
-            // }
         }
     }
 
