@@ -97,8 +97,8 @@ public abstract class AbstractQuarkusExtension {
         return new BaseConfig(effectiveConfig);
     }
 
-    protected BaseConfig baseConfig() {
-        this.baseConfig.finalizeValue();
+    public BaseConfig baseConfig() {
+        // this.baseConfig.finalizeValue();
         return this.baseConfig.get();
     }
 
@@ -114,7 +114,7 @@ public abstract class AbstractQuarkusExtension {
         return classpath;
     }
 
-    protected Manifest manifest() {
+    public Manifest manifest() {
         return baseConfig().manifest();
     }
 
