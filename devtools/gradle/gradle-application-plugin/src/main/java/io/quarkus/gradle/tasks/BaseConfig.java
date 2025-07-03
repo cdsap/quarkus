@@ -51,7 +51,7 @@ public final class BaseConfig {
         return packageConfig().jar().type();
     }
 
-    Manifest manifest() {
+    public Manifest manifest() {
         return manifest;
     }
 

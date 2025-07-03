@@ -67,7 +67,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
 
     @SuppressWarnings("unused")
     public QuarkusBuild manifest(Action<Manifest> action) {
-        action.execute(this.getManifest().get());
+        action.execute(this.manifest());
         return this;
     }
 

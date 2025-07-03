@@ -552,7 +552,6 @@ public class QuarkusPlugin implements Plugin<Project> {
         task.getJarType().set(quarkusExt.baseConfig().jarType());
         task.getManifestAttributes().set(quarkusExt.manifest().getAttributes());
         task.getManifestSections().set(quarkusExt.manifest().getSections());
-        task.getManifest().set(quarkusExt.manifest());
 
     }
 
