@@ -98,7 +98,7 @@ public abstract class AbstractQuarkusExtension {
     }
 
     public BaseConfig baseConfig() {
-        // this.baseConfig.finalizeValue();
+        this.baseConfig.finalizeValue();
         return this.baseConfig.get();
     }
 

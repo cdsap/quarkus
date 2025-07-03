@@ -530,7 +530,7 @@ public class QuarkusPlugin implements Plugin<Project> {
     private static void configureQuarkusBuildTask(Project project, QuarkusBuildTask task,
             TaskProvider<QuarkusApplicationModelTask> quarkusGenerateAppModelTask,
             Provider<ForcedPropertieBuildService> serviceProvider,
-            QuarkusPluginExtension quarkusPluginExtension) {
+            QuarkusPluginExtension quarkusExt) {
         task.getApplicationModel().set(quarkusGenerateAppModelTask.flatMap(QuarkusApplicationModelTask::getApplicationModel));
         SourceSet mainSourceSet = getSourceSet(project, SourceSet.MAIN_SOURCE_SET_NAME);
         task.getAdditionalForcedProperties().set(serviceProvider);
@@ -538,20 +538,21 @@ public class QuarkusPlugin implements Plugin<Project> {
         task.setCompileClasspath(mainSourceSet.getCompileClasspath().plus(mainSourceSet.getRuntimeClasspath())
                 .plus(mainSourceSet.getAnnotationProcessorPath())
                 .plus(mainSourceSet.getResources()));
-        task.getCachingRelevantInput().set(quarkusPluginExtension.baseConfig()
-                .cachingRelevantProperties(quarkusPluginExtension.getCachingRelevantProperties().get()));
-        task.getJarEnabled().set(quarkusPluginExtension.baseConfig().packageConfig().jar().enabled());
-        task.getNativeEnabled().set(quarkusPluginExtension.baseConfig().nativeConfig().enabled());
-        task.getNativeSourcesOnly().set(quarkusPluginExtension.baseConfig().nativeConfig().sourcesOnly());
-        task.getRunnerSuffix().set(quarkusPluginExtension.baseConfig().packageConfig().computedRunnerSuffix());
+        task.getCachingRelevantInput().set(quarkusExt.baseConfig()
+                .cachingRelevantProperties(quarkusExt.getCachingRelevantProperties().get()));
+        task.getJarEnabled().set(quarkusExt.baseConfig().packageConfig().jar().enabled());
+        task.getNativeEnabled().set(quarkusExt.baseConfig().nativeConfig().enabled());
+        task.getNativeSourcesOnly().set(quarkusExt.baseConfig().nativeConfig().sourcesOnly());
+        task.getRunnerSuffix().set(quarkusExt.baseConfig().packageConfig().computedRunnerSuffix());
         task.getRunnerName().set(
-                quarkusPluginExtension.baseConfig().packageConfig().outputName().orElseGet(quarkusPluginExtension::finalName));
+                quarkusExt.baseConfig().packageConfig().outputName().orElseGet(quarkusExt::finalName));
         task.getOutputDirectory()
-                .set(Path.of(quarkusPluginExtension.baseConfig().packageConfig().outputDirectory().map(Path::toString)
+                .set(Path.of(quarkusExt.baseConfig().packageConfig().outputDirectory().map(Path::toString)
                         .orElse(QuarkusPlugin.DEFAULT_OUTPUT_DIRECTORY)));
-        task.getJarType().set(quarkusPluginExtension.baseConfig().jarType());
-        task.getManifestAttributes().set(quarkusPluginExtension.manifest().getAttributes());
-        task.getManifestSections().set(quarkusPluginExtension.manifest().getSections());
+        task.getJarType().set(quarkusExt.baseConfig().jarType());
+        task.getManifestAttributes().set(quarkusExt.manifest().getAttributes());
+        task.getManifestSections().set(quarkusExt.manifest().getSections());
+        task.getManifest().set(quarkusExt.manifest());
 
     }
 

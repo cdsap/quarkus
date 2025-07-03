@@ -65,14 +65,9 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         getIgnoredEntries().addAll(ignoredEntries);
     }
 
-    @Internal
-    public Manifest getManifest() {
-        return extension().manifest();
-    }
-
     @SuppressWarnings("unused")
     public QuarkusBuild manifest(Action<Manifest> action) {
-        action.execute(this.getManifest());
+        action.execute(this.getManifest().get());
         return this;
     }
 
