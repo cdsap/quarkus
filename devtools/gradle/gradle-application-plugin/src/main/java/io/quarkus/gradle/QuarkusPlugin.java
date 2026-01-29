@@ -26,7 +26,6 @@ import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.ExternalModuleDependency;
 import org.gradle.api.artifacts.ProjectDependency;
 import org.gradle.api.file.FileCollection;
-import org.gradle.api.java.archives.Attributes;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.provider.Property;
@@ -62,7 +61,7 @@ import io.quarkus.gradle.tasks.QuarkusInfo;
 import io.quarkus.gradle.tasks.QuarkusListCategories;
 import io.quarkus.gradle.tasks.QuarkusListExtensions;
 import io.quarkus.gradle.tasks.QuarkusListPlatforms;
-import io.quarkus.gradle.tasks.QuarkusPluginExtensionView;
+import io.quarkus.gradle.tasks.QuarkusPrepareTestTask;
 import io.quarkus.gradle.tasks.QuarkusRemoteDev;
 import io.quarkus.gradle.tasks.QuarkusRemoveExtension;
 import io.quarkus.gradle.tasks.QuarkusRun;
@@ -130,6 +129,7 @@ public class QuarkusPlugin implements Plugin<Project> {
     public static final String INTEGRATION_TEST_RUNTIME_ONLY_CONFIGURATION_NAME = "integrationTestRuntimeOnly";
     public static final String IMAGE_CHECK_REQUIREMENTS_NAME = "quarkusImageExtensionChecks";
 
+    public static final String AA = "aaa";
     private final ToolingModelBuilderRegistry registry;
 
     @SuppressWarnings("CdiInjectionPointsInspection")
@@ -141,7 +141,7 @@ public class QuarkusPlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {
         verifyGradleVersion();
-
+        System.out.println("1111111111");
         // Apply the `java` plugin
         project.getPluginManager().apply(JavaPlugin.class);
 
@@ -242,6 +242,7 @@ public class QuarkusPlugin implements Plugin<Project> {
                     QuarkusGenerateCode.QUARKUS_TEST_GENERATED_SOURCES, quarkusExt);
         });
 
+        TaskProvider<QuarkusPrepareTestTask> a = tasks.register("X", QuarkusPrepareTestTask.class);
         TaskProvider<QuarkusApplicationModelTask> quarkusBuildAppModelTask = tasks.register("quarkusBuildAppModel",
                 QuarkusApplicationModelTask.class, task -> {
                     task.dependsOn(tasks.named(JavaPlugin.CLASSES_TASK_NAME));
@@ -403,6 +404,14 @@ public class QuarkusPlugin implements Plugin<Project> {
                     quarkusBuildCacheableAppParts.configure(
                             task -> task.dependsOn(classesTask, resourcesTask, tasks.named(JavaPlugin.JAR_TASK_NAME)));
 
+                    a.configure(task -> {
+                        task.getTestProfileKey()
+                                .set(project.getLayout().getBuildDirectory().file("quarkus/test-profile-key.txt"));
+                        task.getApplicationModel()
+                                .set(quarkusGenerateTestAppModelTask.flatMap(QuarkusApplicationModelTask::getApplicationModel));
+
+                    });
+
                     SourceSet intTestSourceSet = sourceSets.getByName(INTEGRATION_TEST_SOURCE_SET_NAME);
                     intTestSourceSet.setCompileClasspath(
                             intTestSourceSet.getCompileClasspath()
@@ -453,6 +462,7 @@ public class QuarkusPlugin implements Plugin<Project> {
                     });
 
                     tasks.withType(Test.class).configureEach(t -> {
+                        t.dependsOn(tasks.withType(QuarkusPrepareTestTask.class));
                         t.setSystemProperties(extractQuarkusTestSystemProperties(project));
                         t.systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager");
                         t.jvmArgs(
@@ -467,14 +477,10 @@ public class QuarkusPlugin implements Plugin<Project> {
                         t.doFirst(new BeforeTestAction(
                                 project.getProjectDir(),
                                 combinedOutputSourceDirs(project),
-                                quarkusGenerateTestAppModelTask.flatMap(QuarkusApplicationModelTask::getApplicationModel),
                                 quarkusBuild.map(QuarkusBuild::getNativeRunner),
+                                quarkusGenerateTestAppModelTask.flatMap(QuarkusApplicationModelTask::getApplicationModel),
                                 mainSourceSet.getOutput().getClassesDirs(),
-                                project.getObjects().newInstance(QuarkusPluginExtensionView.class, quarkusExt),
-                                project.getObjects().mapProperty(String.class, Object.class)
-                                        .convention(quarkusExt.manifest().getAttributes()),
-                                project.getObjects().mapProperty(String.class, Attributes.class)
-                                        .convention(quarkusExt.getAttributes())));
+                                a.flatMap(QuarkusPrepareTestTask::getTestProfileKey)));
 
                         // also make each task use the JUnit platform since it's the only supported test environment
                         t.useJUnitPlatform();
