@@ -1,10 +1,11 @@
 package io.quarkus.gradle.tasks;
 
+import java.util.Collections;
+
 import org.gradle.api.java.archives.Attributes;
+import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.MapProperty;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Nested;
-import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.*;
 
 /**
  * Quarkus task providing inputs compatible with the configuration cache, used by the {@link QuarkusGenerateCode}
@@ -19,7 +20,7 @@ import org.gradle.api.tasks.Optional;
  * </p>
  */
 public abstract class QuarkusTaskWithExtensionView extends QuarkusTask {
-
+    protected static final String QUARKUS_PROFILE = "quarkus.profile";
     private final QuarkusPluginExtensionView extensionView;
 
     @Input
@@ -31,14 +32,35 @@ public abstract class QuarkusTaskWithExtensionView extends QuarkusTask {
     public abstract MapProperty<String, Attributes> getManifestSections();
 
     @Input
-    public abstract MapProperty<String, String> getCachingRelevantInput();
+    public abstract ListProperty<String> getPropertiesPattern();
+
+    @Input
+    @Optional
+    public abstract ListProperty<String> getCachingRelevantProperties();
+
+    @Input
+    @Optional
+    public abstract MapProperty<String, String> getCachingRelevantProperties2();
 
     public QuarkusTaskWithExtensionView(String description, boolean compatible) {
         super(description, compatible);
         this.extensionView = getProject().getObjects().newInstance(QuarkusPluginExtensionView.class, extension());
     }
 
+    public BaseConfig baseConfig() {
+
+        EffectiveConfig effectiveConfig = EffectiveConfig.builder()
+                .withTaskProperties(Collections.emptyMap())
+                .withBuildProperties(getExtensionView().getQuarkusBuildProperties().get())
+                .withProjectProperties(getExtensionView().getProjectProperties().get())
+                .withSourceDirectories(getExtensionView().getInputFiles().getFiles())
+                .withProfile(quarkusProfile())
+                .build();
+        return new BaseConfig(effectiveConfig);
+    }
+
     public EffectiveConfigProvider effectiveProvider() {
+
         return new EffectiveConfigProvider(
                 getExtensionView().getIgnoredEntries(),
                 getExtensionView().getMainResources(),
@@ -58,5 +80,25 @@ public abstract class QuarkusTaskWithExtensionView extends QuarkusTask {
     @Nested
     protected QuarkusPluginExtensionView getExtensionView() {
         return extensionView;
+    }
+
+    private String quarkusProfile() {
+        String profile = System.getProperty(QUARKUS_PROFILE);
+        if (profile == null) {
+            profile = System.getenv("QUARKUS_PROFILE");
+        }
+        if (profile == null) {
+            profile = getExtensionView().getQuarkusBuildProperties().get().get(QUARKUS_PROFILE);
+        }
+        if (profile == null) {
+            Object p = getExtensionView().getProjectProperties().get().get(QUARKUS_PROFILE);
+            if (p != null) {
+                profile = p.toString();
+            }
+        }
+        if (profile == null) {
+            profile = "prod";
+        }
+        return profile;
     }
 }

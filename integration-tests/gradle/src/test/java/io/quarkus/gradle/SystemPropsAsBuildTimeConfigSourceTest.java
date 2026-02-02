@@ -37,7 +37,8 @@ public class SystemPropsAsBuildTimeConfigSourceTest extends QuarkusGradleWrapper
                 "-Dquarkus.package.jar.type=mutable-jar",
                 ":example-extension:example-extension-deployment:build",
                 // this quarkusIntTest will make sure runtime config properties passed as env vars when launching the app are effective
-                ":application:quarkusIntTest");
+                ":application:quarkusIntTest",
+                "--no-parallel");
 
         final Path buildSystemPropsPath = projectDir.toPath().resolve("application").resolve("build").resolve("quarkus-app")
                 .resolve("quarkus").resolve("build-system.properties");

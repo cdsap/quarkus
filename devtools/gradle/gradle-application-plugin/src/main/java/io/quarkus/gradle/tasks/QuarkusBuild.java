@@ -16,18 +16,11 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
-import org.gradle.api.provider.ListProperty;
-import org.gradle.api.tasks.CacheableTask;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.OutputDirectories;
-import org.gradle.api.tasks.OutputFiles;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.*;
 import org.gradle.api.tasks.options.Option;
 
 import io.quarkus.deployment.pkg.PackageConfig;
+import io.quarkus.gradle.QuarkusPlugin;
 import io.quarkus.gradle.dsl.Manifest;
 import io.quarkus.runtime.util.StringUtil;
 
@@ -53,25 +46,20 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         return this;
     }
 
-    @Internal
-    public ListProperty<String> getIgnoredEntries() {
-        return extension().ignoredEntriesProperty();
-    }
+    //    @Internal
+    //    public ListProperty<String> getIgnoredEntries() {
+    //        return extension().ignoredEntriesProperty();
+    //    }
 
     @Option(description = "When using the uber-jar option, this option can be used to "
             + "specify one or more entries that should be excluded from the final jar", option = "ignored-entry")
     public void setIgnoredEntries(List<String> ignoredEntries) {
-        getIgnoredEntries().addAll(ignoredEntries);
-    }
-
-    @Internal
-    public Manifest getManifest() {
-        return extension().manifest();
+        // getIgnoredEntries().addAll(ignoredEntries);
     }
 
     @SuppressWarnings("unused")
     public QuarkusBuild manifest(Action<Manifest> action) {
-        action.execute(this.getManifest());
+        action.execute(baseConfig().manifest());
         return this;
     }
 
@@ -154,50 +142,66 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         return outputs;
     }
 
+    ///  // getSystemQuarkusProperties().get().containsKey("quarkus.native")
+///
     @SuppressWarnings("deprecation") // legacy JAR
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     protected Collection<File> getBuildInputFiles() {
         List<File> inputs = new ArrayList<>();
-        if (nativeEnabled()) {
-            if (jarEnabled()) {
+
+        String jarEnabled = getSystemQuarkusProperties().get().getOrDefault("quarkus.package.jar.enabled", "true");
+        String nativeEnabled = getSystemQuarkusProperties().get().getOrDefault("quarkus.native", "false");
+        String nativeSourceOnly = getSystemQuarkusProperties().get().getOrDefault("quarkus.native", "false");
+        PackageConfig.JarConfig.JarType jarType = PackageConfig.JarConfig.JarType
+                .fromString(getSystemQuarkusProperties().get().getOrDefault("quarkus.package.jar.type", "fast-jar"));
+        String outputDirectory = getSystemQuarkusProperties().get().getOrDefault("quarkus.package.output-directory",
+                QuarkusPlugin.DEFAULT_OUTPUT_DIRECTORY);
+        if (nativeEnabled == "true") {
+            if (jarEnabled == "true") {
                 throw nativeAndJar();
             }
-            if (nativeSourcesOnly()) {
+            if (nativeSourceOnly == "true") {
                 // nothing
             } else {
                 Path appBuildBaseDir = appBuildDir();
                 inputs.add(genBuildDir().toFile());
-                inputs.add(appBuildBaseDir.resolve(outputDirectory()).toFile());
+                inputs.add(appBuildBaseDir.resolve(outputDirectory).toFile());
                 runnerAndArtifactsInputs(inputs::add, appBuildBaseDir);
             }
-        } else if (jarEnabled()) {
-            PackageConfig.JarConfig.JarType packageType = jarType();
+        } else if (jarEnabled == "true") {
+            PackageConfig.JarConfig.JarType packageType = jarType;
+            System.out.println("xxxxxxxxxxxxxxxxxxxxxxxx " + packageType);
             switch (packageType) {
                 case FAST_JAR -> {
+                    System.out.println("xxxxxxxx  fasyt jat ");
                     Path appBuildBaseDir = appBuildDir();
                     inputs.add(genBuildDir().toFile());
-                    inputs.add(appBuildBaseDir.resolve(outputDirectory()).toFile());
+                    inputs.add(appBuildBaseDir.resolve(outputDirectory).toFile());
                     runnerAndArtifactsInputs(inputs::add, appBuildBaseDir);
                 }
                 case LEGACY_JAR -> {
+                    System.out.println("xxxxxxxx  legacg ");
                     inputs.add(depBuildDir().resolve("lib").toFile());
                     inputs.add(appBuildDir().resolve("lib").toFile());
                     runnerAndArtifactsInputs(inputs::add, appBuildDir());
                 }
                 case MUTABLE_JAR, UBER_JAR -> {
+                    System.out.println("xxxxxxxx  nothing");
                 }
             }
+
         }
+
         return inputs;
     }
 
     private void runnerAndArtifactsInputs(Consumer<File> buildInputs, Path sourceDir) {
         buildInputs.accept(sourceDir.resolve(QUARKUS_ARTIFACT_PROPERTIES).toFile());
-        buildInputs.accept(sourceDir.resolve(nativeRunnerFileName()).toFile());
-        buildInputs.accept(sourceDir.resolve(runnerJarFileName()).toFile());
+        // buildInputs.accept(sourceDir.resolve(nativeRunnerFileName()).toFile());
+        //buildInputs.accept(sourceDir.resolve(runnerJarFileName()).toFile());
         // TODO jib-image* ??
-        buildInputs.accept(sourceDir.resolve(nativeImageSourceJarDirName()).toFile());
+        //  buildInputs.accept(sourceDir.resolve(nativeImageSourceJarDirName()).toFile());
     }
 
     @SuppressWarnings("deprecation") // legacy JAR

@@ -8,7 +8,7 @@ dependencies {
 }
 
 group = "io.quarkus"
-
+//version = "0129"
 java {
     withSourcesJar()
     withJavadocJar()

@@ -35,6 +35,7 @@ import org.gradle.workers.WorkQueue;
 
 import io.quarkus.bootstrap.model.ApplicationModel;
 import io.quarkus.deployment.pkg.PackageConfig;
+import io.quarkus.gradle.QuarkusPlugin;
 import io.quarkus.gradle.tasks.services.ForcedPropertieBuildService;
 import io.quarkus.gradle.tasks.worker.BuildWorker;
 import io.quarkus.gradle.tooling.ToolingUtils;
@@ -57,6 +58,9 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
     public abstract Property<ForcedPropertieBuildService> getAdditionalForcedProperties();
 
     private final Provider<Boolean> preservesJarTimestamps;
+
+    @Input
+    public abstract MapProperty<String, String> getSystemQuarkusProperties();
 
     QuarkusBuildTask(String description, boolean compatible) {
         super(description, compatible);
@@ -87,44 +91,21 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
         this.classpath = compileClasspath;
     }
 
-    @Input
-    public abstract MapProperty<String, String> getCachingRelevantInput();
-
-    @Input
-    public abstract Property<Boolean> getJarEnabled();
-
-    @Input
-    public abstract Property<Boolean> getNativeEnabled();
-
-    @Input
-    public abstract Property<Boolean> getNativeSourcesOnly();
-
-    @Internal
-    public abstract Property<String> getRunnerSuffix();
-
-    @Internal
-    public abstract Property<String> getRunnerName();
-
-    @Internal
-    public abstract Property<Path> getOutputDirectory();
-
-    @Input
-    public abstract Property<PackageConfig.JarConfig.JarType> getJarType();
-
     PackageConfig.JarConfig.JarType jarType() {
-        return getJarType().get();
+        return baseConfig().jarType();
     }
 
     boolean jarEnabled() {
-        return getJarEnabled().get();
+        return baseConfig().packageConfig().jar().enabled();
     }
 
     boolean nativeEnabled() {
-        return getNativeEnabled().get();
+
+        return baseConfig().nativeConfig().enabled();
     }
 
     boolean nativeSourcesOnly() {
-        return getNativeSourcesOnly().get();
+        return baseConfig().nativeConfig().sourcesOnly();
     }
 
     Path gradleBuildDir() {
@@ -189,16 +170,16 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
     }
 
     String runnerBaseName() {
-        return getRunnerName().get();
+        return baseConfig().packageConfig().outputName().orElseGet(getExtensionView().getFinalName()::get);
     }
 
     String outputDirectory() {
-        return getOutputDirectory().get().toString();
+        return baseConfig().packageConfig().outputDirectory().map(Path::toString)
+                .orElse(QuarkusPlugin.DEFAULT_OUTPUT_DIRECTORY);
     }
 
     private String runnerSuffix() {
-        return getRunnerSuffix().get();
-
+        return baseConfig().packageConfig().computedRunnerSuffix();
     }
 
     @InputFile

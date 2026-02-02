@@ -6,11 +6,9 @@ import static io.quarkus.gradle.tasks.QuarkusGradleUtils.getSourceSet;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -141,7 +139,6 @@ public class QuarkusPlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {
         verifyGradleVersion();
-        System.out.println("1111111111");
         // Apply the `java` plugin
         project.getPluginManager().apply(JavaPlugin.class);
 
@@ -285,6 +282,7 @@ public class QuarkusPlugin implements Plugin<Project> {
                 });
 
         TaskProvider<QuarkusBuild> quarkusBuild = tasks.register(QUARKUS_BUILD_TASK_NAME, QuarkusBuild.class, build -> {
+            build.getSystemQuarkusProperties().set(project.getProviders().systemPropertiesPrefixedBy("quarkus").get());
             configureQuarkusBuildTask(project, build, quarkusBuildAppModelTask, serviceProvider, customFs, quarkusExt);
             build.dependsOn(quarkusBuildDependencies, quarkusBuildCacheableAppParts);
             build.getOutputs().doNotCacheIf(
@@ -600,6 +598,7 @@ public class QuarkusPlugin implements Plugin<Project> {
             QuarkusPluginExtension quarkusExt) {
         task.getApplicationModel().set(quarkusGenerateAppModelTask.flatMap(QuarkusApplicationModelTask::getApplicationModel));
         SourceSet mainSourceSet = getSourceSet(project, SourceSet.MAIN_SOURCE_SET_NAME);
+        task.getSystemQuarkusProperties().set(project.getProviders().systemPropertiesPrefixedBy("quarkus").get());
         task.getAdditionalForcedProperties().set(serviceProvider);
         task.usesService(serviceProvider);
         task.getFileSystemOperationsProvider().set(customFs);
@@ -607,20 +606,40 @@ public class QuarkusPlugin implements Plugin<Project> {
         task.setCompileClasspath(mainSourceSet.getCompileClasspath().plus(mainSourceSet.getRuntimeClasspath())
                 .plus(mainSourceSet.getAnnotationProcessorPath())
                 .plus(mainSourceSet.getResources()));
-        task.getCachingRelevantInput().set(quarkusExt
-                .cachingRelevantProperties(quarkusExt.getCachingRelevantProperties().get()));
-        task.getJarEnabled().set(quarkusExt.packageConfig().jar().enabled());
-        task.getNativeEnabled().set(quarkusExt.nativeConfig().enabled());
-        task.getNativeSourcesOnly().set(quarkusExt.nativeConfig().sourcesOnly());
-        task.getRunnerSuffix().set(quarkusExt.packageConfig().computedRunnerSuffix());
-        task.getRunnerName().set(
-                quarkusExt.packageConfig().outputName().orElseGet(quarkusExt::finalName));
-        task.getOutputDirectory()
-                .set(Path.of(quarkusExt.packageConfig().outputDirectory().map(Path::toString)
-                        .orElse(QuarkusPlugin.DEFAULT_OUTPUT_DIRECTORY)));
-        task.getJarType().set(quarkusExt.packageConfig().jar().type());
-        task.getManifestAttributes().set(quarkusExt.manifest().getAttributes());
-        task.getManifestSections().set(quarkusExt.manifest().getSections());
+
+        Map<String, String> envVars = quarkusExt.getCachingRelevantProperties().get().stream()
+                .collect(Collectors.toMap(
+                        Function.identity(),
+                        key -> System.getenv().getOrDefault(key, "")));
+
+        task.getCachingRelevantProperties2().set(envVars);
+        quarkusExt.getCachingRelevantProperties().get().forEach(new Consumer<String>() {
+            @Override
+            public void accept(String s) {
+                System.getProperty(s);
+            }
+        });
+
+        task.getCachingRelevantProperties().set(quarkusExt.getCachingRelevantProperties());
+        quarkusExt.getCachingRelevantProperties().get().forEach(new Consumer<String>() {
+            @Override
+            public void accept(String s) {
+                System.getProperty(s);
+            }
+        });
+        //   quarkusExt.manifest().getAttributes();
+
+        // task.getCachingRelevantInput().set(quarkusExt
+        //         .cachingRelevantProperties(quarkusExt.getCachingRelevantProperties().get()));
+        //      /   task.getRunnerSuffix().set(quarkusExt.packageConfig().computedRunnerSuffix());
+        // task.getRunnerName().set(
+        //         quarkusExt.packageConfig().outputName().orElseGet(quarkusExt::finalName));
+        //        task.getOutputDirectory()
+        //                .set(Path.of(quarkusExt.packageConfig().outputDirectory().map(Path::toString)
+        //                        .orElse(QuarkusPlugin.DEFAULT_OUTPUT_DIRECTORY)));
+        //     //   task.getJarType().set(quarkusExt.packageConfig().jar().type());
+        //  task.getManifestAttributes().set(quarkusExt.manifest().getAttributes());
+        //     task.getManifestSections().set(quarkusExt.manifest().getSections());
 
     }
 
@@ -636,10 +655,22 @@ public class QuarkusPlugin implements Plugin<Project> {
         task.getApplicationModel()
                 .set(applicationModelTaskTaskProvider.flatMap(QuarkusApplicationModelTask::getApplicationModel));
         task.getGeneratedOutputDirectory().set(generatedSources.getJava().getClassesDirectory());
-        task.getCachingRelevantInput()
-                .set(quarkusExt.cachingRelevantProperties(quarkusExt.getCachingRelevantProperties().get()));
-        task.getManifestAttributes().set(quarkusExt.manifest().getAttributes());
-        task.getManifestSections().set(quarkusExt.manifest().getSections());
+        task.getPropertiesPattern().set(List.of("quarkus[.].*", "platform[.]quarkus[.].*"));
+        quarkusExt.getCachingRelevantProperties().get().forEach(new Consumer<String>() {
+            @Override
+            public void accept(String s) {
+                System.getProperty(s);
+            }
+        });
+        Map<String, String> envVars = quarkusExt.getCachingRelevantProperties().get().stream()
+                .collect(Collectors.toMap(
+                        Function.identity(),
+                        key -> System.getenv().getOrDefault(key, "")));
+
+        task.getCachingRelevantProperties2().set(envVars);
+
+        //System.getProperty()
+        task.getCachingRelevantProperties().set(quarkusExt.getCachingRelevantProperties());
     }
 
     private void createSourceSets(Project project) {

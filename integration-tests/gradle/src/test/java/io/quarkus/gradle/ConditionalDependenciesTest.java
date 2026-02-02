@@ -27,7 +27,7 @@ public class ConditionalDependenciesTest extends QuarkusGradleWrapperTestBase {
     public void publishTestExtensions() throws IOException, InterruptedException, URISyntaxException {
         File dependencyProject = getProjectDir("conditional-dependencies");
         runGradleWrapper(dependencyProject, ":transitive-dependency:publishToMavenLocal",
-                ":simple-dependency:publishToMavenLocal");
+                ":simple-dependency:publishToMavenLocal", "--no-parallel");
         runGradleWrapper(dependencyProject,
                 ":ext-a:runtime:publishToMavenLocal",
                 ":ext-a:deployment:publishToMavenLocal",
@@ -69,7 +69,7 @@ public class ConditionalDependenciesTest extends QuarkusGradleWrapperTestBase {
                 ":ext-t:deployment:publishToMavenLocal",
                 ":ext-u:runtime:publishToMavenLocal",
                 ":ext-u:deployment:publishToMavenLocal",
-                ":dev-mode-only-lib:publishToMavenLocal");
+                ":dev-mode-only-lib:publishToMavenLocal", "--no-parallel");
     }
 
     @Test

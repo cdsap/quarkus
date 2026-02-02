@@ -3,8 +3,10 @@ package io.quarkus.gradle.tasks;
 import static io.quarkus.gradle.QuarkusPlugin.BUILD_NATIVE_TASK_NAME;
 import static io.quarkus.gradle.QuarkusPlugin.TEST_NATIVE_TASK_NAME;
 import static io.quarkus.gradle.tasks.AbstractQuarkusExtension.QUARKUS_PROFILE;
+import static io.quarkus.gradle.tasks.QuarkusGradleUtils.getSourceSet;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -19,11 +21,7 @@ import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.provider.ProviderFactory;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Nested;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.SourceSetContainer;
+import org.gradle.api.tasks.*;
 import org.gradle.process.JavaForkOptions;
 import org.gradle.util.GradleVersion;
 
@@ -44,12 +42,18 @@ public abstract class QuarkusPluginExtensionView {
                 getNativeBuild().set(false);
             }
         });
+        getInputFiles().from(getSourceSet(project, SourceSet.MAIN_SOURCE_SET_NAME).getResources().getSourceDirectories()
+                .getFiles());
         getCacheLargeArtifacts().set(extension.getCacheLargeArtifacts());
         getCleanupBuildOutput().set(extension.getCleanupBuildOutput());
         getFinalName().set(extension.getFinalName());
+        System.out.println("inaki123");
+        System.out.println(extension.codeGenForkOptions);
+        System.out.println(extension.buildForkOptions);
+        System.out.println("inaki321");
         getCodeGenForkOptions().set(getProviderFactory().provider(() -> extension.codeGenForkOptions));
         getBuildForkOptions().set(getProviderFactory().provider(() -> extension.buildForkOptions));
-        getIgnoredEntries().set(extension.ignoredEntriesProperty());
+        //getIgnoredEntries().set(extension.ignoredEntriesProperty());
         getMainResources().setFrom(project.getExtensions().getByType(SourceSetContainer.class).getByName(MAIN_SOURCE_SET_NAME)
                 .getResources().getSourceDirectories());
         getQuarkusBuildProperties().set(extension.getQuarkusBuildProperties());
@@ -65,6 +69,18 @@ public abstract class QuarkusPluginExtensionView {
             }
         }
         getProjectProperties().set(projectProperties);
+        //     cas();
+    }
+
+    private BaseConfig cas() {
+        EffectiveConfig effectiveConfig = EffectiveConfig.builder()
+                .withTaskProperties(Collections.emptyMap())
+                //            .withBuildProperties(quarkusBuildProperties.get())
+                //            .withProjectProperties(project.getProperties())
+                //            .withSourceDirectories(resourcesDirs)
+                //            .withProfile(quarkusProfile())
+                .build();
+        return new BaseConfig(effectiveConfig);
     }
 
     private Provider<Map<String, String>> getQuarkusRelevantProjectProperties(Project project) {
@@ -81,6 +97,10 @@ public abstract class QuarkusPluginExtensionView {
 
     @Inject
     public abstract ProviderFactory getProviderFactory();
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract ConfigurableFileCollection getInputFiles();
 
     @Input
     @Optional

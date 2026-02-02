@@ -49,14 +49,14 @@ public class EnforcingPlatformForConditionalDepsTest extends QuarkusGradleWrappe
     @DisplayName("Publish synthetic test artifacts to local Maven repository")
     public void publishTestArtifacts() throws IOException, InterruptedException {
         File dependencyProject = getProjectDir(PRODUCER_PROJECT_PATH);
-        runGradleWrapper(dependencyProject, ":simple-dep:publishToMavenLocal");
+        runGradleWrapper(dependencyProject, ":simple-dep:publishToMavenLocal", "--no-parallel");
         runGradleWrapper(dependencyProject,
                 ":ext-a:runtime:publishToMavenLocal",
                 ":ext-a:deployment:publishToMavenLocal",
                 ":dev-mode-only-lib-94:publishToMavenLocal",
                 ":dev-mode-only-lib-99:publishToMavenLocal",
                 ":test-bom:publishToMavenLocal",
-                ":test-bom-with-exclusion:publishToMavenLocal");
+                ":test-bom-with-exclusion:publishToMavenLocal", "--no-parallel");
     }
 
     /**

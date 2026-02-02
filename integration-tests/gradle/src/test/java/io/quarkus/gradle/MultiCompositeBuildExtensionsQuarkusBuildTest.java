@@ -33,7 +33,7 @@ public class MultiCompositeBuildExtensionsQuarkusBuildTest extends QuarkusGradle
             throw new IllegalStateException("Unable to copy gradle.properties file", e);
         }
 
-        runGradleWrapper(projectDir, ":application:quarkusBuild");
+        runGradleWrapper(projectDir, ":application:quarkusBuild", "--no-parallel");
 
         final Path extension = projectDir.toPath().resolve("extensions").resolve("example-extension").resolve("runtime")
                 .resolve("build")

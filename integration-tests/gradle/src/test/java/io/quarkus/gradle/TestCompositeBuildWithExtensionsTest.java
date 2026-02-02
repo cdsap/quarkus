@@ -20,7 +20,7 @@ public class TestCompositeBuildWithExtensionsTest extends QuarkusGradleWrapperTe
     public void compositeBuildWithExtensions() throws Exception {
         final File projectDir = getProjectDir("multi-composite-build-extensions-project");
 
-        final BuildResult result = runGradleWrapper(projectDir, ":application:clean", ":application:test");
+        final BuildResult result = runGradleWrapper(projectDir, ":application:clean", ":application:test", "--no-parallel");
 
         assertThat(BuildResult.isSuccessful(result.getTasks().get(":application:test"))).isTrue();
 
