@@ -54,12 +54,17 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     @Option(description = "When using the uber-jar option, this option can be used to "
             + "specify one or more entries that should be excluded from the final jar", option = "ignored-entry")
     public void setIgnoredEntries(List<String> ignoredEntries) {
-        // getIgnoredEntries().addAll(ignoredEntries);
+        //  getIgnoredEntries().addAll(ignoredEntries);
+    }
+
+    @Internal
+    public Manifest getManifest() {
+        return extension().manifest();
     }
 
     @SuppressWarnings("unused")
     public QuarkusBuild manifest(Action<Manifest> action) {
-        action.execute(baseConfig().manifest());
+        action.execute(this.getManifest());
         return this;
     }
 

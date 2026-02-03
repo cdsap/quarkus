@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.gradle.api.file.FileCollection;
@@ -251,10 +252,31 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
             }
         });
 
+        baseConfig().manifest().getAttributes().entrySet().forEach(new Consumer<Map.Entry<String, Object>>() {
+            @Override
+            public void accept(Map.Entry<String, Object> stringObjectEntry) {
+                System.out.println("inaki2024    " + stringObjectEntry.getKey() + "=" + stringObjectEntry.getValue());
+            }
+        });
+
+        //        String jarEnabled = getSystemQuarkusProperties().get().getOrDefault("quarkus.package.jar.enabled", "true");
+        //        String nativeEnabled = getSystemQuarkusProperties().get().getOrDefault("quarkus.native", "false");
+        // /       String nativeSourceOnly = getSystemQuarkusProperties().get().getOrDefault("quarkus.native", "false");
+        String jarEnabled = getSystemQuarkusProperties().get().getOrDefault("quarkus.package.jar.enabled", "true");
+        String nativeEnabled = getSystemQuarkusProperties().get().getOrDefault("quarkus.native", "false");
+        String nativeSourceOnly = getSystemQuarkusProperties().get().getOrDefault("quarkus.native", "false");
+        String a = getSystemQuarkusProperties().get().getOrDefault("quarkus.package.jar.manifest.attributes", "");
+        System.out.println("inaki1    " + a);
+        System.out.println("inaki12   " + jarEnabled);
+        //effectiveProvider().manifestAttributes.set(a);
+
         ApplicationModel appModel = resolveAppModelForBuild();
         Map<String, String> quarkusProperties = effectiveProvider()
                 .buildEffectiveConfiguration(appModel, getAdditionalForcedProperties().get().getProperties())
                 .getQuarkusValues();
+        String aa = getSystemQuarkusProperties().get().getOrDefault("quarkus.package.jar.manifest.attributes", "");
+        System.out.println("inaki1981    " + aa);
+        System.out.println("inaki12   " + jarEnabled);
 
         if (nativeEnabled()) {
             if (nativeSourcesOnly()) {
@@ -273,7 +295,8 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
                             .sorted()
                             .collect(Collectors.joining("\n    ", "\n    ", "")));
         }
-
+        System.out.println("inaki2026");
+        System.out.println(getExtensionView().getBuildForkOptions().get());
         WorkQueue workQueue = workQueue(quarkusProperties, getExtensionView().getBuildForkOptions().get());
 
         workQueue.submit(BuildWorker.class, params -> {

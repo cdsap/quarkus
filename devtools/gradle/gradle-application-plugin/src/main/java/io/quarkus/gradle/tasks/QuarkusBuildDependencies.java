@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -150,6 +151,12 @@ public abstract class QuarkusBuildDependencies extends QuarkusBuildTask {
                 .buildEffectiveConfiguration(appModel, new HashMap<>())
                 .getConfig();
 
+        config.getPropertyNames().forEach(new Consumer<String>() {
+            @Override
+            public void accept(String s) {
+                System.out.println("quarkus build dependencies " + s);
+            }
+        });
         // see https://quarkus.io/guides/class-loading-reference#configuring-class-loading
         Set<ArtifactKey> removedArtifacts = config.getOptionalValue(CLASS_LOADING_REMOVED_ARTIFACTS, String.class)
                 .map(QuarkusBuildDependencies::dependenciesListToArtifactKeySet)

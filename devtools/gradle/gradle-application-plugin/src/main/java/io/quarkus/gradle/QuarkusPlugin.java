@@ -596,6 +596,13 @@ public class QuarkusPlugin implements Plugin<Project> {
             Provider<ForcedPropertieBuildService> serviceProvider,
             Provider<CustomFileSystemOperations> customFs,
             QuarkusPluginExtension quarkusExt) {
+        System.out.println("111111111111111111111111");
+        System.out.println("22222222 ");
+        //        project.getProviders().provider(() -> {
+        //            quarkusExt.codeGenForkOptions
+        //        }
+        // System.out.println(quarkusExt.buildForkOptions);
+
         task.getApplicationModel().set(quarkusGenerateAppModelTask.flatMap(QuarkusApplicationModelTask::getApplicationModel));
         SourceSet mainSourceSet = getSourceSet(project, SourceSet.MAIN_SOURCE_SET_NAME);
         task.getSystemQuarkusProperties().set(project.getProviders().systemPropertiesPrefixedBy("quarkus").get());
@@ -627,7 +634,7 @@ public class QuarkusPlugin implements Plugin<Project> {
                 System.getProperty(s);
             }
         });
-        //   quarkusExt.manifest().getAttributes();
+        quarkusExt.manifest().getAttributes();
 
         // task.getCachingRelevantInput().set(quarkusExt
         //         .cachingRelevantProperties(quarkusExt.getCachingRelevantProperties().get()));
@@ -640,6 +647,9 @@ public class QuarkusPlugin implements Plugin<Project> {
         //     //   task.getJarType().set(quarkusExt.packageConfig().jar().type());
         //  task.getManifestAttributes().set(quarkusExt.manifest().getAttributes());
         //     task.getManifestSections().set(quarkusExt.manifest().getSections());
+
+        task.getManifestAttributes().set(quarkusExt.manifest().getAttributes());
+        task.getManifestSections().set(quarkusExt.manifest().getSections());
 
     }
 
