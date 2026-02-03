@@ -154,7 +154,6 @@ public abstract class QuarkusBuildDependencies extends QuarkusBuildTask {
         config.getPropertyNames().forEach(new Consumer<String>() {
             @Override
             public void accept(String s) {
-                System.out.println("quarkus build dependencies " + s);
             }
         });
         // see https://quarkus.io/guides/class-loading-reference#configuring-class-loading

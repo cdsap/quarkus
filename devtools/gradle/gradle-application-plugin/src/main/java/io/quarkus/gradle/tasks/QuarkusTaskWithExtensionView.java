@@ -1,7 +1,6 @@
 package io.quarkus.gradle.tasks;
 
 import java.util.Collections;
-import java.util.function.BiConsumer;
 
 import org.gradle.api.java.archives.Attributes;
 import org.gradle.api.provider.ListProperty;
@@ -62,12 +61,6 @@ public abstract class QuarkusTaskWithExtensionView extends QuarkusTask {
     }
 
     public EffectiveConfigProvider effectiveProvider() {
-        getManifestAttributes().get().forEach(new BiConsumer<String, Object>() {
-            @Override
-            public void accept(String s, Object o) {
-                System.out.println("aaaaa" + s + "" + o);
-            }
-        });
         return new EffectiveConfigProvider(
                 getExtensionView().getIgnoredEntries(),
                 getExtensionView().getMainResources(),

@@ -176,7 +176,6 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
             }
         } else if (jarEnabled == "true") {
             PackageConfig.JarConfig.JarType packageType = jarType;
-            System.out.println("xxxxxxxxxxxxxxxxxxxxxxxx " + packageType);
             switch (packageType) {
                 case FAST_JAR -> {
                     System.out.println("xxxxxxxx  fasyt jat ");

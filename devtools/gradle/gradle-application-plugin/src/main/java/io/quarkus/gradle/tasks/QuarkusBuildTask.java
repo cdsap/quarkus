@@ -255,7 +255,7 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
         baseConfig().manifest().getAttributes().entrySet().forEach(new Consumer<Map.Entry<String, Object>>() {
             @Override
             public void accept(Map.Entry<String, Object> stringObjectEntry) {
-                System.out.println("inaki2024    " + stringObjectEntry.getKey() + "=" + stringObjectEntry.getValue());
+
             }
         });
 
@@ -295,8 +295,6 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
                             .sorted()
                             .collect(Collectors.joining("\n    ", "\n    ", "")));
         }
-        System.out.println("inaki2026");
-        System.out.println(getExtensionView().getBuildForkOptions().get());
         WorkQueue workQueue = workQueue(quarkusProperties, getExtensionView().getBuildForkOptions().get());
 
         workQueue.submit(BuildWorker.class, params -> {
