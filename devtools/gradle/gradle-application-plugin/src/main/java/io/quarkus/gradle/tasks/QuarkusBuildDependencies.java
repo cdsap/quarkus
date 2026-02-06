@@ -10,13 +10,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
 import org.gradle.api.GradleException;
-import org.gradle.api.provider.MapProperty;
 import org.gradle.api.tasks.OutputDirectories;
 import org.gradle.api.tasks.TaskAction;
 
@@ -78,23 +76,6 @@ public abstract class QuarkusBuildDependencies extends QuarkusBuildTask {
     public void collectDependencies() {
         Path depDir = depBuildDir();
 
-        ApplicationModel appModel = resolveAppModelForBuild();
-        SmallRyeConfig config = effectiveProvider()
-            .buildEffectiveConfiguration(appModel, new HashMap<>())
-            .getConfig();
-
-config.getPropertyNames().forEach(new Consumer<String>() {
-    @Override
-    public void accept(String s) {
-
-    }
-});
-//        for (String name : config.getPropertyNames()) {
-//            if (name.startsWith("quarkus.")) {
-//                config.getOptionalValue(name, String.class)
-//                    .ifPresent(value -> props.put(name, value));
-//            }
-//        }
         // Caching and "up-to-date" checks depend on the inputs, this 'delete()' should ensure that the up-to-date
         // checks work against "clean" outputs, considering that the outputs depend on the package-type.
         getFileSystemOperations().delete(delete -> delete.delete(depDir));

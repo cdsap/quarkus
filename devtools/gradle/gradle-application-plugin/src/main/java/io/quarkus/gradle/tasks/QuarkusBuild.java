@@ -14,7 +14,6 @@ import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
-import io.quarkus.gradle.QuarkusPlugin;
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.provider.ListProperty;
@@ -160,45 +159,6 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
     @PathSensitive(PathSensitivity.RELATIVE)
     protected Collection<File> getBuildInputFiles() {
         List<File> inputs = new ArrayList<>();
-        if(!getExperimentalMode().get().booleanValue()) {
-            return getManualInputs(
-                nativeEnabled(),
-                jarEnabled(),
-                nativeSourcesOnly(),
-                jarType(),
-                outputDirectory(),
-                nativeRunnerFileName(),
-                runnerJarFileName(),
-                nativeImageSourceJarDirName()
-            );
-        } else {
-          Boolean nativeEnabled = getQuarkusPropertiesExperimental().get().contains("quarkus.native.enabled")
-                jarEnabled(),
-                nativeSourcesOnly(),
-                jarType(),
-                outputDirectory(),
-                nativeRunnerFileName(),
-                runnerJarFileName(),
-                nativeImageSourceJarDirName()
-            return getManualInputs(
-                getQuarkusPropertiesExperimental().get().contains("quarkus.native.enabled").orElse("faslse").equalsIgnoreCase("true"),
-                getProject().getProviders().systemProperty("quarkus.package.jar.enabled").orElse("true").equalsIgnoreCase("true"),
-                getProject().getProviders().systemProperty("quarkus.native.sources-only").orElse("false").equalsIgnoreCase("true"),
-                PackageConfig.JarConfig.JarType.valueOf(getProject().getProviders().systemProperty("quarkus.package.jar.type").orElse("fast-jar").toUpperCase()),
-                getProject().getProviders().systemProperty("quarkus.package.output-directory").orElse(QuarkusPlugin.DEFAULT_OUTPUT_DIRECTORY),
-                getProject().getProviders().systemProperty("quarkus.package.output-name").orElse(getExtensionView().getFinalName().get()),
-                getProject().getProviders().systemProperty("quarkus.package.jar.add-runner-suffix").orElse("--runner")
-            )
-        }
-        getProject().getProviders().systemProperty("quarkus.native.enabled").orElse("faslse");
-        getProject().getProviders().systemProperty("quarkus.package.jar.enabled").orElse("true");
-        getProject().getProviders().systemProperty("quarkus.native.sources-only").orElse("false");
-        getProject().getProviders().systemProperty("quarkus.package.jar.type").orElse("fast-jar");
-        getProject().getProviders().systemProperty("quarkus.package.output-directory").orElse(QuarkusPlugin.DEFAULT_OUTPUT_DIRECTORY);
-        getProject().getProviders().systemProperty("quarkus.package.output-name").orElse(getExtensionView().getFinalName().get());
-        getProject().getProviders().systemProperty("quarkus.package.jar.add-runner-suffix").orElse("--runner");
-
-
         if (nativeEnabled()) {
             if (jarEnabled()) {
                 throw nativeAndJar();
@@ -209,7 +169,7 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
                 Path appBuildBaseDir = appBuildDir();
                 inputs.add(genBuildDir().toFile());
                 inputs.add(appBuildBaseDir.resolve(outputDirectory()).toFile());
-                runnerAndArtifactsInputs(inputs::add, appBuildBaseDir, nativeRunnerFileName, runnerJarFileName, nativeImageSourceJarDirName);
+                runnerAndArtifactsInputs(inputs::add, appBuildBaseDir);
             }
         } else if (jarEnabled()) {
             PackageConfig.JarConfig.JarType packageType = jarType();
@@ -218,12 +178,12 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
                     Path appBuildBaseDir = appBuildDir();
                     inputs.add(genBuildDir().toFile());
                     inputs.add(appBuildBaseDir.resolve(outputDirectory()).toFile());
-                    runnerAndArtifactsInputs(inputs::add, appBuildBaseDir, nativeRunnerFileName, runnerJarFileName, nativeImageSourceJarDirName);
+                    runnerAndArtifactsInputs(inputs::add, appBuildBaseDir);
                 }
                 case LEGACY_JAR -> {
                     inputs.add(depBuildDir().resolve("lib").toFile());
                     inputs.add(appBuildDir().resolve("lib").toFile());
-                    runnerAndArtifactsInputs(inputs::add, appBuildDir(), nativeRunnerFileName, runnerJarFileName, nativeImageSourceJarDirName);
+                    runnerAndArtifactsInputs(inputs::add, appBuildDir());
                 }
                 case MUTABLE_JAR, UBER_JAR -> {
                 }
@@ -232,63 +192,17 @@ public abstract class QuarkusBuild extends QuarkusBuildTask {
         return inputs;
     }
 
-    public List<File> getManualInputs (
-        Boolean nativeEnabled,
-        Boolean jarEnabled,
-        Boolean nativeSourcesOnly,
-        PackageConfig.JarConfig.JarType jarType,
-        String outputDirectory,
-        String nativeRunnerFileName,
-        String runnerJarFileName,
-        String nativeImageSourceJarDirName
-    ) {
-        List<File> inputs = new ArrayList<>();
-        if (nativeEnabled) {
-            if (jarEnabled) {
-                throw nativeAndJar();
-            }
-            if (nativeSourcesOnly) {
-                // nothing
-            } else {
-                Path appBuildBaseDir = appBuildDir();
-                inputs.add(genBuildDir().toFile());
-                inputs.add(appBuildBaseDir.resolve(outputDirectory).toFile());
-                runnerAndArtifactsInputs(inputs::add, appBuildBaseDir, nativeRunnerFileName, runnerJarFileName, nativeImageSourceJarDirName);
-            }
-        } else if (jarEnabled) {
-            PackageConfig.JarConfig.JarType packageType = jarType;
-            switch (packageType) {
-                case FAST_JAR -> {
-                    Path appBuildBaseDir = appBuildDir();
-                    inputs.add(genBuildDir().toFile());
-                    inputs.add(appBuildBaseDir.resolve(outputDirectory).toFile());
-                    runnerAndArtifactsInputs(inputs::add, appBuildBaseDir, nativeRunnerFileName, runnerJarFileName,nativeImageSourceJarDirName);
-                }
-                case LEGACY_JAR -> {
-                    inputs.add(depBuildDir().resolve("lib").toFile());
-                    inputs.add(appBuildDir().resolve("lib").toFile());
-                    runnerAndArtifactsInputs(inputs::add, appBuildDir(),nativeRunnerFileName, runnerJarFileName,nativeImageSourceJarDirName););
-                }
-                case MUTABLE_JAR, UBER_JAR -> {
-                }
-            }
-        }
-        return inputs;
-    }
-
-
-    private void runnerAndArtifactsInputs(Consumer<File> buildInputs, Path sourceDir, String nativeRunnerFileName, String runnerJarFileName, String nativeImageSourceJarDirName) {
+    private void runnerAndArtifactsInputs(Consumer<File> buildInputs, Path sourceDir) {
         buildInputs.accept(sourceDir.resolve(QUARKUS_ARTIFACT_PROPERTIES).toFile());
-        buildInputs.accept(sourceDir.resolve(nativeRunnerFileName).toFile());
-        buildInputs.accept(sourceDir.resolve(runnerJarFileName).toFile());
+        buildInputs.accept(sourceDir.resolve(nativeRunnerFileName()).toFile());
+        buildInputs.accept(sourceDir.resolve(runnerJarFileName()).toFile());
         // TODO jib-image* ??
-        buildInputs.accept(sourceDir.resolve(nativeImageSourceJarDirName).toFile());
+        buildInputs.accept(sourceDir.resolve(nativeImageSourceJarDirName()).toFile());
     }
 
     @SuppressWarnings("deprecation") // legacy JAR
     @TaskAction
     public void finalizeQuarkusBuild() {
-
         if (getExtensionView().getForcedProperties().get().containsKey(QUARKUS_IGNORE_LEGACY_DEPLOY_BUILD)) {
             getLogger().info("SKIPPING finalizedBy deploy build");
             return;

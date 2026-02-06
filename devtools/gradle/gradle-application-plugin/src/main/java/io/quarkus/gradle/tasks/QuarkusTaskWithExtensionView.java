@@ -1,11 +1,8 @@
 package io.quarkus.gradle.tasks;
 
 import org.gradle.api.java.archives.Attributes;
-import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.MapProperty;
-import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 
@@ -33,16 +30,7 @@ public abstract class QuarkusTaskWithExtensionView extends QuarkusTask {
     @Optional
     public abstract MapProperty<String, Attributes> getManifestSections();
 
-//    @Input
-//    @Optional
-//    public abstract ListProperty<String> getQuarkusPropertiesExperimental();
-
     @Input
-    @Optional
-    public abstract Property<Boolean> getExperimentalMode();
-
-    @Input
-    @Internal
     public abstract MapProperty<String, String> getCachingRelevantInput();
 
     public QuarkusTaskWithExtensionView(String description, boolean compatible) {
