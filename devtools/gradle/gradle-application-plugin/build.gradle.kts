@@ -10,7 +10,7 @@ dependencies {
 }
 
 group = "io.quarkus"
-version="0205"
+
 gradlePlugin {
     plugins.create("quarkusPlugin") {
         id = "io.quarkus"
