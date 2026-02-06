@@ -7,13 +7,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
-import io.quarkus.gradle.tasks.QuarkusBuildPropertiesResolver;
 import org.gradle.api.Project;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import io.quarkus.gradle.extension.QuarkusPluginExtension;
+import io.quarkus.gradle.tasks.QuarkusBuildPropertiesResolver;
 
 class QuarkusBuildPropertiesResolverTest {
 

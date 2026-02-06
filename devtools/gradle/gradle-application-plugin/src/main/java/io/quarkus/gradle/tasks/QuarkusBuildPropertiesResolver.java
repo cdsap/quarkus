@@ -9,29 +9,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import io.quarkus.gradle.QuarkusPlugin;
 import org.eclipse.microprofile.config.spi.ConfigSource;
 import org.gradle.api.Project;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
 
+import io.quarkus.gradle.QuarkusPlugin;
 import io.quarkus.gradle.extension.QuarkusPluginExtension;
 import io.smallrye.config.PropertiesConfigSourceLoader;
 
-public final class QuarkusBuildPropertiesResolver {
+public class QuarkusBuildPropertiesResolver {
     private static final String QUARKUS_PREFIX = "quarkus.";
     private static final String APPLICATION_PROPERTIES = "application.properties";
     private static final int APPLICATION_PROPERTIES_ORDINAL = 250;
     private static final String DEFAULT_JAR_TYPE = "fast-jar";
     private static final String DEFAULT_RUNNER_SUFFIX = "-runner";
-    private static final String KEY_NATIVE_ENABLED = "quarkus.native.enabled";
-    private static final String KEY_JAR_ENABLED = "quarkus.package.jar.enabled";
-    private static final String KEY_OUTPUT_DIRECTORY = "quarkus.package.output-directory";
-    private static final String KEY_OUTPUT_NAME = "quarkus.package.output-name";
-    private static final String KEY_ADD_RUNNER_SUFFIX = "quarkus.package.jar.add-runner-suffix";
-    private static final String KEY_NATIVE_SOURCES_ONLY = "quarkus.native.sources-only";
-    private static final String KEY_JAR_TYPE = "quarkus.package.jar.type";
-    private static final String KEY_RUNNER_SUFFIX = "quarkus.package.jar.runner-suffix";
+    protected static final String KEY_NATIVE_ENABLED = "quarkus.native.enabled";
+    protected static final String KEY_JAR_ENABLED = "quarkus.package.jar.enabled";
+    protected static final String KEY_OUTPUT_DIRECTORY = "quarkus.package.output-directory";
+    protected static final String KEY_OUTPUT_NAME = "quarkus.package.output-name";
+    protected static final String KEY_ADD_RUNNER_SUFFIX = "quarkus.package.jar.add-runner-suffix";
+    protected static final String KEY_NATIVE_SOURCES_ONLY = "quarkus.native.sources-only";
+    protected static final String KEY_JAR_TYPE = "quarkus.package.jar.type";
+    protected static final String KEY_RUNNER_SUFFIX = "quarkus.package.jar.runner-suffix";
+    protected static final String KEY_IGNORED_ENTRIES = "quarkus.package.ignored-entries";
 
     private QuarkusBuildPropertiesResolver() {
     }
@@ -46,6 +47,7 @@ public final class QuarkusBuildPropertiesResolver {
         defaults.put(KEY_NATIVE_SOURCES_ONLY, "false");
         defaults.put(KEY_JAR_TYPE, DEFAULT_JAR_TYPE);
         defaults.put(KEY_RUNNER_SUFFIX, DEFAULT_RUNNER_SUFFIX);
+        defaults.put(KEY_IGNORED_ENTRIES, "");
 
         Map<String, String> properties = new LinkedHashMap<>();
         for (Map.Entry<String, String> entry : defaults.entrySet()) {

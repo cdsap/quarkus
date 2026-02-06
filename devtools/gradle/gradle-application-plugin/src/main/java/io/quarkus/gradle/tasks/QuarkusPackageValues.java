@@ -1,5 +1,7 @@
 package io.quarkus.gradle.tasks;
 
+import static io.quarkus.gradle.tasks.QuarkusBuildPropertiesResolver.*;
+
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +38,7 @@ public class QuarkusPackageValues {
 
     public Boolean getJarEnabled() {
         if (experimental) {
-            return Boolean.parseBoolean(properties.get("quarkus.package.jar.enabled"));
+            return Boolean.parseBoolean(properties.get(KEY_JAR_ENABLED));
         } else {
             return extension.packageConfig().jar().enabled();
         }
@@ -44,7 +46,7 @@ public class QuarkusPackageValues {
 
     public Boolean getNativeEnabled() {
         if (experimental) {
-            return Boolean.parseBoolean(properties.get("quarkus.native.enabled"));
+            return Boolean.parseBoolean(properties.get(KEY_NATIVE_ENABLED));
         } else {
             return extension.nativeConfig().enabled();
         }
@@ -52,7 +54,7 @@ public class QuarkusPackageValues {
 
     public Path getOutputDirectory() {
         if (experimental) {
-            return Path.of(properties.get("quarkus.package.output-directory"));
+            return Path.of(properties.get(KEY_OUTPUT_DIRECTORY));
         } else {
             return Path.of(extension.packageConfig().outputDirectory().map(Path::toString)
                     .orElse(QuarkusPlugin.DEFAULT_OUTPUT_DIRECTORY));
@@ -61,7 +63,7 @@ public class QuarkusPackageValues {
 
     public String getOutputName() {
         if (experimental) {
-            return properties.get("quarkus.package.output-name");
+            return properties.get(KEY_OUTPUT_NAME);
         } else {
             return extension.packageConfig().outputName().orElseGet(extension::finalName);
         }
@@ -69,7 +71,7 @@ public class QuarkusPackageValues {
 
     public Boolean getNativeSourcesOnly() {
         if (experimental) {
-            return Boolean.parseBoolean(properties.get("quarkus.native.sources-only"));
+            return Boolean.parseBoolean(properties.get(KEY_NATIVE_SOURCES_ONLY));
         } else {
             return extension.nativeConfig().sourcesOnly();
         }
@@ -77,7 +79,7 @@ public class QuarkusPackageValues {
 
     public PackageConfig.JarConfig.JarType getJarType() {
         if (experimental) {
-            return PackageConfig.JarConfig.JarType.fromString(properties.get("quarkus.package.jar.type"));
+            return PackageConfig.JarConfig.JarType.fromString(properties.get(KEY_JAR_TYPE));
         } else {
             return extension.packageConfig().jar().type();
         }
@@ -85,8 +87,8 @@ public class QuarkusPackageValues {
 
     public String getRunnerSuffix() {
         if (experimental) {
-            if (Boolean.parseBoolean(properties.get("quarkus.package.jar.add-runner-suffix"))) {
-                return properties.get("quarkus.package.jar.runner-suffix");
+            if (Boolean.parseBoolean(properties.get(KEY_ADD_RUNNER_SUFFIX))) {
+                return properties.get(KEY_RUNNER_SUFFIX);
             } else {
                 return "";
             }
@@ -97,7 +99,6 @@ public class QuarkusPackageValues {
 
     public Map<String, String> getCachingRelevantProperties(List<String> cachingRelevantProperties) {
         if (experimental) {
-
             return cachingRelevantProperties.stream()
                     .filter(s -> !"quarkus[.].*".equals(s) && !"platform[.]quarkus[.].*".equals(s))
                     .map(s -> Map.entry(s, project.getProviders().environmentVariable(s).getOrNull()))
@@ -123,6 +124,20 @@ public class QuarkusPackageValues {
             return Map.of();
         } else {
             return extension.manifest().getSections();
+        }
+    }
+
+    public List<String> getIgnoredEntries() {
+        if (experimental) {
+            String userIgnoredEntries = properties.get(KEY_IGNORED_ENTRIES);
+            System.out.println("11111");
+            if (userIgnoredEntries != null && !userIgnoredEntries.isEmpty()) {
+                return List.of(userIgnoredEntries.split(","));
+            } else {
+                return List.of();
+            }
+        } else {
+            return extension.ignoredEntriesProperty().get();
         }
     }
 }

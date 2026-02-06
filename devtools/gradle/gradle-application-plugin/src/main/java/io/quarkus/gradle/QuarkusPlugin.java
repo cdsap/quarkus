@@ -6,7 +6,11 @@ import static io.quarkus.gradle.tasks.QuarkusGradleUtils.getSourceSet;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -37,7 +41,6 @@ import org.gradle.api.tasks.testing.Test;
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry;
 import org.gradle.util.GradleVersion;
 
-import io.quarkus.gradle.tasks.QuarkusPackageValues;
 import io.quarkus.gradle.actions.BeforeTestAction;
 import io.quarkus.gradle.dependency.ApplicationDeploymentClasspathBuilder;
 import io.quarkus.gradle.extension.QuarkusPluginExtension;
@@ -59,6 +62,7 @@ import io.quarkus.gradle.tasks.QuarkusInfo;
 import io.quarkus.gradle.tasks.QuarkusListCategories;
 import io.quarkus.gradle.tasks.QuarkusListExtensions;
 import io.quarkus.gradle.tasks.QuarkusListPlatforms;
+import io.quarkus.gradle.tasks.QuarkusPackageValues;
 import io.quarkus.gradle.tasks.QuarkusPluginExtensionView;
 import io.quarkus.gradle.tasks.QuarkusRemoteDev;
 import io.quarkus.gradle.tasks.QuarkusRemoveExtension;
@@ -475,7 +479,9 @@ public class QuarkusPlugin implements Plugin<Project> {
                                 project.getObjects().mapProperty(String.class, Object.class)
                                         .convention(values.getManifestAttributes()),
                                 project.getObjects().mapProperty(String.class, Attributes.class)
-                                        .convention(values.getManifestSections())));
+                                        .convention(values.getManifestSections()),
+                                project.getObjects().listProperty(String.class)
+                                        .convention(values.getIgnoredEntries())));
 
                         // also make each task use the JUnit platform since it's the only supported test environment
                         t.useJUnitPlatform();
@@ -615,6 +621,7 @@ public class QuarkusPlugin implements Plugin<Project> {
         task.getJarType().set(values.getJarType());
         task.getManifestAttributes().set(values.getManifestAttributes());
         task.getManifestSections().set(values.getManifestSections());
+        task.getIgnoredListEntries().set(values.getIgnoredEntries());
 
     }
 
@@ -638,7 +645,7 @@ public class QuarkusPlugin implements Plugin<Project> {
                 .set(values.getCachingRelevantProperties(quarkusExt.getCachingRelevantProperties().get()));
         task.getManifestAttributes().set(values.getManifestAttributes());
         task.getManifestSections().set(values.getManifestSections());
-
+        task.getIgnoredListEntries().set(values.getIgnoredEntries());
     }
 
     private void createSourceSets(Project project) {
