@@ -10,7 +10,7 @@ dependencies {
 }
 
 group = "io.quarkus"
-
+version="0205"
 gradlePlugin {
     plugins.create("quarkusPlugin") {
         id = "io.quarkus"
@@ -28,6 +28,6 @@ tasks.test {
 
 // to generate reproducible jars
 tasks.withType<Jar>().configureEach {
-    isPreserveFileTimestamps = false 
-    isReproducibleFileOrder = true   
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
 }

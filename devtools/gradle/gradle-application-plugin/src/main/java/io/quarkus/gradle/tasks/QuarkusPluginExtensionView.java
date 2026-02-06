@@ -49,10 +49,12 @@ public abstract class QuarkusPluginExtensionView {
         getFinalName().set(extension.getFinalName());
         getCodeGenForkOptions().set(getProviderFactory().provider(() -> extension.codeGenForkOptions));
         getBuildForkOptions().set(getProviderFactory().provider(() -> extension.buildForkOptions));
-        getIgnoredEntries().set(extension.ignoredEntriesProperty());
+      //  getIgnoredEntries().set(extension.ignoredEntriesProperty());
         getMainResources().setFrom(project.getExtensions().getByType(SourceSetContainer.class).getByName(MAIN_SOURCE_SET_NAME)
                 .getResources().getSourceDirectories());
         getQuarkusBuildProperties().set(extension.getQuarkusBuildProperties());
+        //getProviderFactory().systemPropertiesPrefixedBy("quarkus").get()
+        getQuarkusSystemProperties().set(getProviderFactory().systemPropertiesPrefixedBy("quarkus").get());
         getQuarkusRelevantProjectProperties().set(getQuarkusRelevantProjectProperties(project));
         getQuarkusProfileSystemVariable().set(getProviderFactory().systemProperty(QUARKUS_PROFILE));
         getQuarkusProfileEnvVariable().set(getProviderFactory().environmentVariable("QUARKUS_PROFILE"));
@@ -112,6 +114,9 @@ public abstract class QuarkusPluginExtensionView {
 
     @Input
     public abstract MapProperty<String, String> getQuarkusBuildProperties();
+
+    @Input
+    public abstract MapProperty<String, String> getQuarkusSystemProperties();
 
     @Input
     public abstract MapProperty<String, String> getQuarkusRelevantProjectProperties();

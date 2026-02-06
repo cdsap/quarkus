@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.quarkus.gradle.QuarkusPlugin;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.logging.LogLevel;
@@ -62,9 +63,9 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
         super(description, compatible);
 
         this.preservesJarTimestamps = getProject().getTasks()
-                .named(JavaPlugin.JAR_TASK_NAME, Jar.class)
-                .map(Jar::isPreserveFileTimestamps)
-                .orElse(getProject().getProviders().provider(() -> false));
+            .named(JavaPlugin.JAR_TASK_NAME, Jar.class)
+            .map(Jar::isPreserveFileTimestamps)
+            .orElse(getProject().getProviders().provider(() -> false));
 
     }
 
@@ -91,11 +92,14 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
     public abstract MapProperty<String, String> getCachingRelevantInput();
 
     @Input
+    @Internal
     public abstract Property<Boolean> getJarEnabled();
 
     @Input
+    @Internal
     public abstract Property<Boolean> getNativeEnabled();
 
+    @Internal
     @Input
     public abstract Property<Boolean> getNativeSourcesOnly();
 
@@ -109,22 +113,29 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
     public abstract Property<Path> getOutputDirectory();
 
     @Input
+    @Internal
     public abstract Property<PackageConfig.JarConfig.JarType> getJarType();
 
     PackageConfig.JarConfig.JarType jarType() {
-        return getJarType().get();
+        return baseConfig().jarType();
     }
 
     boolean jarEnabled() {
-        return getJarEnabled().get();
+        return baseConfig().packageConfig().jar().enabled();
     }
 
     boolean nativeEnabled() {
-        return getNativeEnabled().get();
+        return baseConfig().nativeConfig().enabled();
+    }
+
+    public BaseConfig baseConfig() {
+        ApplicationModel appModel = resolveAppModelForBuild();
+        return new BaseConfig(effectiveProvider()
+            .buildEffectiveConfiguration(appModel, getAdditionalForcedProperties().get().getProperties()));
     }
 
     boolean nativeSourcesOnly() {
-        return getNativeSourcesOnly().get();
+        return baseConfig().nativeConfig().sourcesOnly();
     }
 
     Path gradleBuildDir() {
@@ -189,15 +200,16 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
     }
 
     String runnerBaseName() {
-        return getRunnerName().get();
+        return baseConfig().packageConfig().outputName().orElse(getExtensionView().getFinalName().get());
     }
 
     String outputDirectory() {
-        return getOutputDirectory().get().toString();
+        return baseConfig().packageConfig().outputDirectory().map(Path::toString)
+            .orElse(QuarkusPlugin.DEFAULT_OUTPUT_DIRECTORY);
     }
 
     private String runnerSuffix() {
-        return getRunnerSuffix().get();
+        return baseConfig().packageConfig().runnerSuffix();
 
     }
 
@@ -233,6 +245,7 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
     void generateBuild() {
         Path buildDir = gradleBuildDir();
         Path genDir = genBuildDir();
+
         if (nativeEnabled()) {
             if (nativeSourcesOnly()) {
                 getLogger().info("Building Quarkus app for native (sources only) packaging in {}", genDir);
@@ -272,8 +285,8 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
 
         ApplicationModel appModel = resolveAppModelForBuild();
         Map<String, String> quarkusProperties = effectiveProvider()
-                .buildEffectiveConfiguration(appModel, getAdditionalForcedProperties().get().getProperties())
-                .getQuarkusValues();
+            .buildEffectiveConfiguration(appModel, getAdditionalForcedProperties().get().getProperties())
+            .getQuarkusValues();
 
         if (nativeEnabled()) {
             if (nativeSourcesOnly()) {
@@ -287,10 +300,10 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
 
         if (getLogger().isEnabled(LogLevel.INFO)) {
             getLogger().info("Effective properties: {}",
-                    quarkusProperties.entrySet().stream()
-                            .map(Object::toString)
-                            .sorted()
-                            .collect(Collectors.joining("\n    ", "\n    ", "")));
+                quarkusProperties.entrySet().stream()
+                    .map(Object::toString)
+                    .sorted()
+                    .collect(Collectors.joining("\n    ", "\n    ", "")));
         }
 
         WorkQueue workQueue = workQueue(quarkusProperties, getExtensionView().getBuildForkOptions().get());
@@ -345,10 +358,10 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
     void abort(String message, Object... args) {
         getLogger().warn(message, args);
         getProject().getTasks().stream()
-                .filter(t -> t != this)
-                .filter(t -> !t.getState().getExecuted()).forEach(t -> {
-                    t.setEnabled(false);
-                });
+            .filter(t -> t != this)
+            .filter(t -> !t.getState().getExecuted()).forEach(t -> {
+                t.setEnabled(false);
+            });
         throw new StopExecutionException();
     }
 
@@ -377,7 +390,7 @@ public abstract class QuarkusBuildTask extends QuarkusTaskWithExtensionView {
         }
         for (Map.Entry<String, ?> entry : getExtensionView().getProjectProperties().get().entrySet()) {
             if ((entry.getKey().startsWith("quarkus.") || entry.getKey().startsWith("platform.quarkus."))
-                    && entry.getValue() != null) {
+                && entry.getValue() != null) {
                 buildSystemProperties.put(entry.getKey(), entry.getValue().toString());
             }
         }
